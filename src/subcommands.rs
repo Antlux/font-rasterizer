@@ -1,4 +1,4 @@
-use std::{fmt::Display, io::Read, num::ParseFloatError, path::Path};
+use std::{fmt::Display, num::ParseFloatError, path::Path};
 
 pub enum SubcommandError {
     NoPath,
@@ -21,30 +21,22 @@ impl Display for SubcommandError {
 }
 
 pub fn gradient() -> Result<(), SubcommandError> {
+
+    let file = rfd::FileDialog::new()
+        .add_filter("font", &["ttf", "ttc", "otf"])
+        .set_directory("/")
+        .pick_file()
+        .ok_or(SubcommandError::NoPath)?;
+
+    
+
+
     println!("Please provide arguments as so:");
     println!("<font_path> <cell_width> <cell_height> [char_height (pixels: f32)]");
 
     let mut user_input = "".into(); 
     std::io::stdin().read_line(&mut user_input).unwrap();
     let mut args = user_input.trim().split(' ');
-
-    let font_path = Path::new(
-        args.next().ok_or(SubcommandError::NoPath)
-        .and_then(|path| {
-            if !path.is_empty() {
-                Ok(path)
-            } else {
-                Err(SubcommandError::NoPath)
-            }
-        })?
-    );
-
-    font_path
-        .try_exists()
-        .map_err(|_| SubcommandError::InvalidPath)
-        .and_then(|exists| {
-            if !exists {Err(SubcommandError::InvalidPath)} else {Ok(())}
-        })?;
 
     let cell_width = args
         .next()
@@ -64,12 +56,8 @@ pub fn gradient() -> Result<(), SubcommandError> {
         cell_height
     };
 
-    println!("{} - {} {} - {}px", font_path.display(), cell_width, cell_height, pixel_height);
 
     Ok(())
-
-    println!("Please select a layout:")
-
 }
 
 pub fn sequence() {
