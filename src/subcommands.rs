@@ -1,4 +1,4 @@
-use std::{fmt::Display, num::ParseFloatError};
+use std::{fmt::{Debug, Display}, io::stdin, num::ParseFloatError, str::FromStr};
 
 pub enum SubcommandError {
     NoPath,
@@ -20,42 +20,41 @@ impl Display for SubcommandError {
     }
 }
 
-pub fn gradient() -> Result<(), SubcommandError> {
 
-    let file = rfd::FileDialog::new()
+pub fn get_input<T>() -> Result<T, <T as FromStr>::Err> where T: ToString + FromStr, <T as FromStr>::Err: Debug {
+    let mut input_buf = String::new();
+    let _ = stdin().read_line(&mut input_buf);
+    input_buf
+        .trim()
+        .split(' ')
+        .next()
+        .unwrap()
+        .parse::<T>()
+}
+
+
+pub fn gradient() -> Result<(), SubcommandError> {
+    let file_path = rfd::FileDialog::new()
         .add_filter("font", &["ttf", "ttc", "otf"])
         .set_directory("/")
         .pick_file()
         .ok_or(SubcommandError::NoPath)?;
 
+    println!("Please enter cell height (in whole pixels):");
+    let cell_width = get_input::<usize>().unwrap_or(8);
+    
+    println!("Please enter cell width (in whole pixels):");
+    let cell_height = get_input::<usize>().unwrap_or(8);
 
+    println!("Please enter font render height:");
+    let pixel_height = get_input::<f32>().unwrap_or(8.0);
 
-
-    println!("Please provide arguments as so:");
-    println!("<font_path> <cell_width> <cell_height> [char_height (pixels: f32)]");
-
-    let mut user_input = "".into(); 
-    std::io::stdin().read_line(&mut user_input).unwrap();
-    let mut args = user_input.trim().split(' ');
-
-    let cell_width = args
-        .next()
-        .ok_or(SubcommandError::MissingCellDim)?
-        .parse::<f32>()
-        .map_err(|err| SubcommandError::CellDimParsingError(err))?;
-
-    let cell_height = args
-        .next()
-        .ok_or(SubcommandError::MissingCellDim)?
-        .parse::<f32>()
-        .map_err(|err| SubcommandError::CellDimParsingError(err))?;
-
-    let pixel_height = if let Some(arg) = args.next() {
-        arg.parse::<f32>().map_err(|err| SubcommandError::CellDimParsingError(err))?
-    } else {
-        cell_height
-    };
-
+    println!("Rendering gradient from {} with cells of {} by {} pixels rendered at {}", 
+        file_path.file_name().unwrap().to_str().unwrap(),
+        cell_width, 
+        cell_height, 
+        pixel_height
+    );
 
     Ok(())
 }
