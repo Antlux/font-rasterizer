@@ -1,10 +1,10 @@
-use std::{fmt::{Debug, Display}, io::stdin, num::ParseFloatError, str::FromStr};
+use std::{fmt::{Debug, Display}, io::stdin, str::FromStr};
 
 pub enum SubcommandError {
     NoPath,
     InvalidPath,
     MissingCellDim,
-    CellDimParsingError(ParseFloatError),
+    InputParsingError,
 }
 
 impl Display for SubcommandError {
@@ -13,9 +13,7 @@ impl Display for SubcommandError {
             Self::NoPath => write!(f, "No path was provided."),
             Self::InvalidPath => write!(f, "Invalid Path."),
             Self::MissingCellDim => write!(f, "Must provide dimension."),
-            Self::CellDimParsingError(err) => {
-                write!(f, "Encountered error parsing cell dimension: {err}.")
-            }
+            Self::InputParsingError => write!(f, "Encountered error parsing user input.")
         }
     }
 }
@@ -41,13 +39,39 @@ pub fn gradient() -> Result<(), SubcommandError> {
         .ok_or(SubcommandError::NoPath)?;
 
     println!("Please enter cell height (in whole pixels):");
-    let cell_width = get_input::<usize>().unwrap_or(8);
+    let cell_width;
+    loop {
+        if let Some(width) = get_input::<usize>().ok() {
+            cell_width = width;
+            break;
+        } else {
+            println!("Error parsing input. Please enter cell height (in whole pixels):");
+        }
+    }
     
     println!("Please enter cell width (in whole pixels):");
-    let cell_height = get_input::<usize>().unwrap_or(8);
+    let cell_height;
+    loop {
+        if let Some(height) = get_input::<usize>().ok() {
+            cell_height = height;
+            break;
+        } else {
+            println!("Error parsing input. Please enter cell height (in whole pixels):");
+        }
+    }
+
 
     println!("Please enter font render height:");
-    let pixel_height = get_input::<f32>().unwrap_or(8.0);
+    let pixel_height;
+    loop {
+        if let Some(height) = get_input::<f32>().ok() {
+            pixel_height = height;
+            break;
+        } else {
+            println!("Error parsing input. Please enter cell height (in whole pixels):");
+        }
+    }
+
 
     println!("Rendering gradient from {} with cells of {} by {} pixels rendered at {}", 
         file_path.file_name().unwrap().to_str().unwrap(),

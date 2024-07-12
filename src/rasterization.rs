@@ -1,20 +1,61 @@
-use std::{fs::File, io::BufReader, path::Path};
+use std::{fmt::Display, fs::File, io::BufReader, path::Path};
 use fontdue::{Font, Metrics};
-
-pub type Rasterizations = Vec<(Metrics, Vec<u8>)>;
-
-pub trait RasterManip {
+pub enum RasterizationSort {
+    Brightness,
 }
 
-impl RasterManip for Rasterizations {}
+pub type Rasterization = (Metrics, Vec<u8>);
+
+trait RasterInfo {
+    fn brightness(&self) -> usize;
+}
+
+impl RasterInfo for Rasterization {
+    fn brightness(&self) -> usize {
+        let (_, data) = &self;
+        data
+            .into_iter()
+            .map(|v| v.to_owned() as usize)
+            .sum()
+    }
+}
 
 
-enum FontFaceError {
+
+pub type Rasterizations = Vec<Rasterization>;
+pub trait RasterManip {
+    fn sort_rasters_by(&mut self, sort: RasterizationSort);
+}
+
+impl RasterManip for Rasterizations {
+    fn sort_rasters_by(&mut self, sort: RasterizationSort) {
+        match sort {
+            RasterizationSort::Brightness => {
+                self.sort_by(|a, b| {
+                    a.brightness().cmp(&b.brightness())
+                });
+            }
+        }
+    }
+}
+
+
+pub enum FontFaceError {
     FontOpeningError,
     CreationError(&'static str),
 }
 
-struct FontFace {
+impl Display for FontFaceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::FontOpeningError => write!(f, "Encountered error opening font file."),
+            Self::CreationError(err) => write!(f, "Encountered error creating font face {err}"),
+        }
+    }
+}
+
+
+pub struct FontFace {
     font: Font,
 }
 
