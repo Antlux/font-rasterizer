@@ -1,5 +1,4 @@
 pub mod subcommands;
+pub mod rasterization;
 
-pub fn generate_atlas(font: ) {
 
-}

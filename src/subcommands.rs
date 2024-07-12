@@ -1,4 +1,4 @@
-use std::{fmt::Display, num::ParseFloatError, path::Path};
+use std::{fmt::Display, num::ParseFloatError};
 
 pub enum SubcommandError {
     NoPath,
@@ -28,7 +28,7 @@ pub fn gradient() -> Result<(), SubcommandError> {
         .pick_file()
         .ok_or(SubcommandError::NoPath)?;
 
-    
+
 
 
     println!("Please provide arguments as so:");
