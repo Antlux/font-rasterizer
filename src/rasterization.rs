@@ -1,4 +1,4 @@
-use std::{fmt::Display, fs::File, io::{BufReader, Read}, path::Path};
+use std::{fmt::Display, fs::File, io::Read, path::Path};
 use fontdue::{Font, Metrics};
 pub enum RasterizationSort {
     Brightness,

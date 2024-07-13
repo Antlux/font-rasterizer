@@ -4,6 +4,7 @@ use rasterization::{FontFace, RasterManip, RasterizationSort};
 
 pub mod subcommands;
 pub mod rasterization;
+pub mod renderer;
 
 
 pub enum GenerationError {
@@ -12,15 +13,17 @@ pub enum GenerationError {
 
 
 pub enum GenerationLayout {
-    Rect,
-    Linear,
+    Square,
+    Horizontal,
+    Vertical,
 }
 
 impl GenerationLayout {
     pub fn keys() -> Vec<String> {
         vec![
-            GenerationLayout::Rect.to_string(),
-            GenerationLayout::Linear.to_string(),
+            GenerationLayout::Square.to_string(),
+            GenerationLayout::Horizontal.to_string(),
+            GenerationLayout::Vertical.to_string(),
         ]
     }
 }
@@ -30,8 +33,9 @@ impl FromStr for GenerationLayout {
     type Err = GenerationError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "rect" => Ok(GenerationLayout::Rect),
-            "linear" => Ok(GenerationLayout::Linear),
+            "square" => Ok(GenerationLayout::Square),
+            "horizontal" => Ok(GenerationLayout::Horizontal),
+            "vertical" => Ok(GenerationLayout::Vertical),
             _ => Err(GenerationError::LayoutParsingError),
         }
     }
@@ -40,8 +44,9 @@ impl FromStr for GenerationLayout {
 impl Display for GenerationLayout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Linear => write!(f, "linear"),
-            Self::Rect => write!(f, "rect"),
+            Self::Horizontal => write!(f, "linear"),
+            Self::Vertical => write!(f, "horizontal"),
+            Self::Square => write!(f, "square"),
         }
     }
 }
@@ -55,7 +60,7 @@ pub fn generate_gradient(
     cell_height: usize,
     pixel_height: f32,
     layout: GenerationLayout
-) -> Vec<u8> {
+) -> (usize, usize, Vec<u8>) {
     let mut rasterizations = font_face.rasterize(input, pixel_height);
     rasterizations.sort_rasters_by(RasterizationSort::Brightness);
     
@@ -63,11 +68,15 @@ pub fn generate_gradient(
     let cell_v_count;
 
     match layout {
-        GenerationLayout::Linear => {
+        GenerationLayout::Horizontal => {
             cell_h_count = rasterizations.len();
             cell_v_count = 1usize;
         },
-        GenerationLayout::Rect => {
+        GenerationLayout::Vertical => {
+            cell_h_count = 1usize;
+            cell_v_count = rasterizations.len();
+        }
+        GenerationLayout::Square => {
             cell_h_count = (rasterizations.len() as f32).sqrt().ceil() as usize;
             cell_v_count = ((rasterizations.len() as f32) / (cell_h_count as f32)).ceil() as usize;
         },
@@ -90,5 +99,5 @@ pub fn generate_gradient(
         }
     }
 
-    data_out
+    (cell_h_count * cell_width, cell_v_count * cell_height, data_out)
 }

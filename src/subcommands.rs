@@ -104,8 +104,6 @@ pub fn gradient() -> Result<(), SubcommandError> {
         }
     }
     
-
-
     let data = generate_gradient(font_face, None, cell_width, cell_height, pixel_height, layout);
 
     Ok(())
