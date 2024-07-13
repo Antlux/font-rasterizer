@@ -2,7 +2,7 @@ use std::{fmt::{Debug, Display}, io::stdin, str::FromStr};
 
 use dialoguer::Select;
 
-use crate::{generate_gradient, rasterization::{FontFace, FontFaceError}, renderer::{render, Image, RendererError}, GenerationLayout};
+use crate::{generate_gradient_data, rasterization::{FontFace, FontFaceError}, renderer::{render, Image, RendererError}, GenerationLayout};
 
 pub enum SubcommandError {
     NoFontPath,
@@ -48,7 +48,7 @@ pub fn gradient() -> Result<(), SubcommandError> {
 
     let font_face = FontFace::load(font_path.as_path()).map_err(|err| SubcommandError::FontLoadingError(err))?;
 
-    println!("Enter cell height (in whole pixels):");
+    println!("Enter cell width (in whole pixels):");
     let cell_width;
     loop {
         if let Some(width) = get_input::<usize>().ok() {
@@ -59,7 +59,7 @@ pub fn gradient() -> Result<(), SubcommandError> {
         }
     }
     
-    println!("Enter cell width (in whole pixels):");
+    println!("Enter cell height (in whole pixels):");
     let cell_height;
     loop {
         if let Some(height) = get_input::<usize>().ok() {
@@ -89,6 +89,17 @@ pub fn gradient() -> Result<(), SubcommandError> {
         pixel_height
     );
 
+    println!("Please enter if you want to remove brightness duplicates (true - false):");
+    let raster_dedup;
+    loop {
+        if let Some(dedup) = get_input().ok() {
+            raster_dedup = dedup;
+            break;
+        } else {
+            println!("Error parsing input. Please enter if you want to remove brightness duplicates (true - false):");
+        }
+    }
+
     let layouts = GenerationLayout::keys();
     let layout;
     loop {
@@ -106,7 +117,7 @@ pub fn gradient() -> Result<(), SubcommandError> {
         }
     }
     
-    let (width, height, data) = generate_gradient(&font_face, None, cell_width, cell_height, pixel_height, layout, true);
+    let (width, height, data) = generate_gradient_data(&font_face, None, cell_width, cell_height, pixel_height, layout, raster_dedup);
     let image = Image::Grayscale(font_face.name().to_owned(), width, height, data);
 
     render(image).map_err(|err| SubcommandError::RenderingError(err))?;
