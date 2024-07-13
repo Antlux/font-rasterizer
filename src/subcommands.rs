@@ -2,7 +2,7 @@ use std::{fmt::{Debug, Display}, io::stdin, str::FromStr};
 
 use dialoguer::Select;
 
-use crate::{generate_gradient, rasterization::{FontFace, FontFaceError}, GenerationLayout};
+use crate::{generate_gradient, rasterization::{FontFace, FontFaceError}, renderer::{render, Image, RendererError}, GenerationLayout};
 
 pub enum SubcommandError {
     NoFontPath,
@@ -10,6 +10,7 @@ pub enum SubcommandError {
     FontLoadingError(FontFaceError),
     MissingCellDim,
     InputParsingError,
+    RenderingError(RendererError)
 }
 
 impl Display for SubcommandError {
@@ -19,7 +20,8 @@ impl Display for SubcommandError {
             Self::InvalidFontPath => write!(f, "Invalid Path."),
             Self::FontLoadingError(err) => write!(f, "Encountered error loading font: {err}."),
             Self::MissingCellDim => write!(f, "Must provide dimension."),
-            Self::InputParsingError => write!(f, "Encountered error parsing user input.")
+            Self::InputParsingError => write!(f, "Encountered error parsing user input."),
+            Self::RenderingError(err) => write!(f, "Encountered error rendering: {err}.")
         }
     }
 }
@@ -104,7 +106,10 @@ pub fn gradient() -> Result<(), SubcommandError> {
         }
     }
     
-    let data = generate_gradient(font_face, None, cell_width, cell_height, pixel_height, layout);
+    let (width, height, data) = generate_gradient(&font_face, None, cell_width, cell_height, pixel_height, layout, true);
+    let image = Image::Grayscale(font_face.name().to_owned(), width, height, data);
+
+    render(image).map_err(|err| SubcommandError::RenderingError(err))?;
 
     Ok(())
 }

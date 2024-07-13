@@ -1,7 +1,7 @@
 use std::{fmt::Display, fs::File, io::BufWriter};
 
 pub enum Image {
-    RGBA(Vec<u8>, usize, usize),
+    Grayscale(String, usize, usize, Vec<u8>),
 }
 
 
@@ -13,8 +13,8 @@ pub enum RendererError {
 impl Display for RendererError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidPath => write!(f, "Path provided is invalid."),
-            Self::CreationError => write!(f, "Encountered error creating render file.")
+            Self::InvalidPath => write!(f, "Path provided is invalid"),
+            Self::CreationError => write!(f, "Encountered error creating render file")
         }
     }
 }
@@ -22,12 +22,19 @@ impl Display for RendererError {
 
 pub fn render(image: Image) -> Result<(), RendererError> {
 
-    let Image::RGBA(data, width, height) = image;
+    let Image::Grayscale(name, width, height, data) = image;
 
-    let render_path = rfd::FileDialog::new()
+    let mut render_path = rfd::FileDialog::new()
         .set_directory("/")
+        .add_filter("png", &["png"])
         .pick_folder()
         .ok_or(RendererError::InvalidPath)?;
+
+    render_path.push(format!("{}.png", name));
+
+
+    println!("Trying to create file at {}", render_path.display());
+
     let file = File::create(render_path).map_err(|_| RendererError::CreationError)?;
     let ref mut writer = BufWriter::new(file);
 

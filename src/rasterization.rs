@@ -1,6 +1,6 @@
 use std::{fmt::Display, fs::File, io::Read, path::Path};
 use fontdue::{Font, Metrics};
-pub enum RasterizationSort {
+pub enum RasterizationProperty {
     Brightness,
 }
 
@@ -23,16 +23,24 @@ impl RasterInfo for Rasterization {
 
 pub type Rasterizations = Vec<Rasterization>;
 pub trait RasterManip {
-    fn sort_rasters_by(&mut self, sort: RasterizationSort);
+    fn sort_rasters_by(&mut self, property: RasterizationProperty);
+    fn dedup_rasters_by(&mut self, property: RasterizationProperty);
 }
 
 impl RasterManip for Rasterizations {
-    fn sort_rasters_by(&mut self, sort: RasterizationSort) {
-        match sort {
-            RasterizationSort::Brightness => {
+    fn sort_rasters_by(&mut self, property: RasterizationProperty) {
+        match property {
+            RasterizationProperty::Brightness => {
                 self.sort_by(|a, b| {
                     a.brightness().cmp(&b.brightness())
                 });
+            }
+        }
+    }
+    fn dedup_rasters_by(&mut self, property: RasterizationProperty) {
+        match property {
+            RasterizationProperty::Brightness => {
+                self.dedup_by(|a, b| a.brightness() == b.brightness())
             }
         }
     }
