@@ -2,11 +2,15 @@ use std::{fmt::Display, fs::File, io::Read, path::Path};
 use fontdue::{Font, Metrics};
 pub enum RasterizationProperty {
     Brightness,
+    Width,
+    Height,
 }
 
 pub type Rasterization = (Metrics, Vec<u8>);
-trait RasterInfo {
+pub trait RasterInfo {
     fn brightness(&self) -> usize;
+    fn width(&self) -> usize;
+    fn height(&self) -> usize;
 }
 
 impl RasterInfo for Rasterization {
@@ -17,9 +21,15 @@ impl RasterInfo for Rasterization {
             .map(|v| v.to_owned() as usize)
             .sum()
     }
+    fn width(&self) -> usize {
+        let (m, _) = self;
+        m.height
+    }
+    fn height(&self) -> usize {
+        let (m, _) = self;
+        m.height
+    }
 }
-
-
 
 pub type Rasterizations = Vec<Rasterization>;
 pub trait RasterManip {
@@ -34,13 +44,20 @@ impl RasterManip for Rasterizations {
                 self.sort_by(|a, b| {
                     a.brightness().cmp(&b.brightness())
                 });
-            }
+            },
+            _ => {}
         }
     }
     fn dedup_rasters_by(&mut self, property: RasterizationProperty) {
         match property {
             RasterizationProperty::Brightness => {
                 self.dedup_by(|a, b| a.brightness() == b.brightness())
+            },
+            RasterizationProperty::Width => {
+                self.dedup_by(|a, b| a.width() == b.width())
+            }
+            RasterizationProperty::Height => {
+                self.dedup_by(|a, b| a.height() == b.height())
             }
         }
     }
