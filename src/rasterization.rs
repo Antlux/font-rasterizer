@@ -1,11 +1,10 @@
-use std::{fmt::Display, fs::File, io::BufReader, path::Path};
+use std::{fmt::Display, fs::File, io::{BufReader, Read}, path::Path};
 use fontdue::{Font, Metrics};
 pub enum RasterizationSort {
     Brightness,
 }
 
 pub type Rasterization = (Metrics, Vec<u8>);
-
 trait RasterInfo {
     fn brightness(&self) -> usize;
 }
@@ -49,7 +48,7 @@ impl Display for FontFaceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::FontOpeningError => write!(f, "Encountered error opening font file."),
-            Self::CreationError(err) => write!(f, "Encountered error creating font face {err}"),
+            Self::CreationError(err) => write!(f, "Encountered error creating font face: {err}"),
         }
     }
 }
@@ -57,22 +56,29 @@ impl Display for FontFaceError {
 
 pub struct FontFace {
     font: Font,
+    name: String,
 }
 
 impl FontFace {
-    pub fn new(font_path: &Path) -> Result<Self, FontFaceError> {
-        let file = File::open(font_path).map_err(|_| FontFaceError::FontOpeningError)?;
-        let reader = BufReader::new(file);
-        
+    pub fn load(font_path: &Path) -> Result<Self, FontFaceError> {
+        let mut buf = vec![]; 
+        let mut file = File::open(font_path).map_err(|_| FontFaceError::FontOpeningError)?;
+        let _ = file.read_to_end(&mut buf);
+
         Ok(Self{ 
             font: {
                 Font::from_bytes(
-                    reader.buffer(),
+                    buf,
                     fontdue::FontSettings::default()
                 )
                 .map_err(|err| FontFaceError::CreationError(err))?
-            } 
+            },
+            name: font_path.file_name().unwrap().to_str().unwrap().into()
         })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn chars(&self) -> Vec<char> {

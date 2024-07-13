@@ -1,8 +1,13 @@
 use std::{fmt::{Debug, Display}, io::stdin, str::FromStr};
 
+use dialoguer::Select;
+
+use crate::{generate_gradient, rasterization::{FontFace, FontFaceError}, GenerationLayout};
+
 pub enum SubcommandError {
-    NoPath,
-    InvalidPath,
+    NoFontPath,
+    InvalidFontPath,
+    FontLoadingError(FontFaceError),
     MissingCellDim,
     InputParsingError,
 }
@@ -10,8 +15,9 @@ pub enum SubcommandError {
 impl Display for SubcommandError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::NoPath => write!(f, "No path was provided."),
-            Self::InvalidPath => write!(f, "Invalid Path."),
+            Self::NoFontPath => write!(f, "No path was provided."),
+            Self::InvalidFontPath => write!(f, "Invalid Path."),
+            Self::FontLoadingError(err) => write!(f, "Encountered error loading font: {err}."),
             Self::MissingCellDim => write!(f, "Must provide dimension."),
             Self::InputParsingError => write!(f, "Encountered error parsing user input.")
         }
@@ -32,13 +38,15 @@ pub fn get_input<T>() -> Result<T, <T as FromStr>::Err> where T: ToString + From
 
 
 pub fn gradient() -> Result<(), SubcommandError> {
-    let file_path = rfd::FileDialog::new()
+    let font_path = rfd::FileDialog::new()
         .add_filter("font", &["ttf", "ttc", "otf"])
         .set_directory("/")
         .pick_file()
-        .ok_or(SubcommandError::NoPath)?;
+        .ok_or(SubcommandError::NoFontPath)?;
 
-    println!("Please enter cell height (in whole pixels):");
+    let font_face = FontFace::load(font_path.as_path()).map_err(|err| SubcommandError::FontLoadingError(err))?;
+
+    println!("Enter cell height (in whole pixels):");
     let cell_width;
     loop {
         if let Some(width) = get_input::<usize>().ok() {
@@ -49,7 +57,7 @@ pub fn gradient() -> Result<(), SubcommandError> {
         }
     }
     
-    println!("Please enter cell width (in whole pixels):");
+    println!("Enter cell width (in whole pixels):");
     let cell_height;
     loop {
         if let Some(height) = get_input::<usize>().ok() {
@@ -61,7 +69,7 @@ pub fn gradient() -> Result<(), SubcommandError> {
     }
 
 
-    println!("Please enter font render height:");
+    println!("Enter font render height:");
     let pixel_height;
     loop {
         if let Some(height) = get_input::<f32>().ok() {
@@ -72,16 +80,55 @@ pub fn gradient() -> Result<(), SubcommandError> {
         }
     }
 
-
     println!("Rendering gradient from {} with cells of {} by {} pixels rendered at {}", 
-        file_path.file_name().unwrap().to_str().unwrap(),
+        font_face.name(),
         cell_width, 
         cell_height, 
         pixel_height
     );
 
+    let layouts = GenerationLayout::keys();
+    let layout;
+    loop {
+        let layout_selection = Select::new()
+        .with_prompt("Choose render layout")
+        .items(&layouts)
+        .interact()
+        .unwrap();
+
+        if let Some(l) = layouts.get(layout_selection) {
+            if let Some(l) = l.parse().ok() {
+                layout = l;
+                break;
+            }
+        }
+    }
+    
+
+
+    let data = generate_gradient(font_face, None, cell_width, cell_height, pixel_height, layout);
+
     Ok(())
 }
+
+
+// let selection = Select::new()
+//         .with_prompt("Choose generation type")
+//         .items(&subcommands)
+//         .interact()
+//         .unwrap();
+
+//     match subcommands[selection] {
+//         "gradient" => gradient().unwrap_or_else(|err| eprintln!("ERROR: {err}")),
+//         "sequence" => sequence(),
+//         "variants" => variants(),
+//         "help" => help(),
+//         other => {
+//             println!("'{other}' is not a recognized subcommand.");
+//             help();
+//         }         
+//     }
+
 
 pub fn sequence() {
 

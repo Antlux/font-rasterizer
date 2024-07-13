@@ -1,12 +1,52 @@
+use std::{fmt::Display, str::FromStr};
+
 use rasterization::{FontFace, RasterManip, RasterizationSort};
 
 pub mod subcommands;
 pub mod rasterization;
 
+
+pub enum GenerationError {
+    LayoutParsingError
+}
+
+
 pub enum GenerationLayout {
     Rect,
     Linear,
 }
+
+impl GenerationLayout {
+    pub fn keys() -> Vec<String> {
+        vec![
+            GenerationLayout::Rect.to_string(),
+            GenerationLayout::Linear.to_string(),
+        ]
+    }
+}
+
+
+impl FromStr for GenerationLayout {
+    type Err = GenerationError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "rect" => Ok(GenerationLayout::Rect),
+            "linear" => Ok(GenerationLayout::Linear),
+            _ => Err(GenerationError::LayoutParsingError),
+        }
+    }
+}
+
+impl Display for GenerationLayout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Linear => write!(f, "linear"),
+            Self::Rect => write!(f, "rect"),
+        }
+    }
+}
+
+
 
 pub fn generate_gradient(
     font_face: FontFace,
