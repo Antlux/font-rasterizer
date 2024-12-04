@@ -1,5 +1,5 @@
-use std::{fmt::Display, fs::File, io::Read, path::Path};
 use fontdue::{Font, Metrics};
+use std::{fmt::Display, fs::File, io::Read, path::Path};
 pub enum RasterizationProperty {
     Brightness,
     Width,
@@ -8,24 +8,21 @@ pub enum RasterizationProperty {
 
 pub type Rasterization = (Metrics, Vec<u8>);
 pub trait RasterInfo {
-    fn brightness(&self) -> usize;
-    fn width(&self) -> usize;
-    fn height(&self) -> usize;
+    fn get_brightness(&self) -> usize;
+    fn get_width(&self) -> usize;
+    fn get_height(&self) -> usize;
 }
 
 impl RasterInfo for Rasterization {
-    fn brightness(&self) -> usize {
+    fn get_brightness(&self) -> usize {
         let (_, data) = &self;
-        data
-            .into_iter()
-            .map(|v| v.to_owned() as usize)
-            .sum()
+        data.into_iter().map(|v| v.to_owned() as usize).sum()
     }
-    fn width(&self) -> usize {
+    fn get_width(&self) -> usize {
         let (m, _) = self;
         m.height
     }
-    fn height(&self) -> usize {
+    fn get_height(&self) -> usize {
         let (m, _) = self;
         m.height
     }
@@ -41,28 +38,21 @@ impl RasterManip for Rasterizations {
     fn sort_rasters_by(&mut self, property: RasterizationProperty) {
         match property {
             RasterizationProperty::Brightness => {
-                self.sort_by(|a, b| {
-                    a.brightness().cmp(&b.brightness())
-                });
-            },
+                self.sort_by(|a, b| a.get_brightness().cmp(&b.get_brightness()));
+            }
             _ => {}
         }
     }
     fn dedup_rasters_by(&mut self, property: RasterizationProperty) {
         match property {
             RasterizationProperty::Brightness => {
-                self.dedup_by(|a, b| a.brightness() == b.brightness())
-            },
-            RasterizationProperty::Width => {
-                self.dedup_by(|a, b| a.width() == b.width())
+                self.dedup_by(|a, b| a.get_brightness() == b.get_brightness())
             }
-            RasterizationProperty::Height => {
-                self.dedup_by(|a, b| a.height() == b.height())
-            }
+            RasterizationProperty::Width => self.dedup_by(|a, b| a.get_width() == b.get_width()),
+            RasterizationProperty::Height => self.dedup_by(|a, b| a.get_height() == b.get_height()),
         }
     }
 }
-
 
 pub enum FontFaceError {
     FontOpeningError,
@@ -78,7 +68,6 @@ impl Display for FontFaceError {
     }
 }
 
-
 pub struct FontFace {
     font: Font,
     name: String,
@@ -86,19 +75,16 @@ pub struct FontFace {
 
 impl FontFace {
     pub fn load(font_path: &Path) -> Result<Self, FontFaceError> {
-        let mut buf = vec![]; 
+        let mut buf = vec![];
         let mut file = File::open(font_path).map_err(|_| FontFaceError::FontOpeningError)?;
         let _ = file.read_to_end(&mut buf);
 
-        Ok(Self{ 
+        Ok(Self {
             font: {
-                Font::from_bytes(
-                    buf,
-                    fontdue::FontSettings::default()
-                )
-                .map_err(|err| FontFaceError::CreationError(err))?
+                Font::from_bytes(buf, fontdue::FontSettings::default())
+                    .map_err(|err| FontFaceError::CreationError(err))?
             },
-            name: font_path.file_name().unwrap().to_str().unwrap().into()
+            name: font_path.file_name().unwrap().to_str().unwrap().into(),
         })
     }
 
@@ -112,12 +98,10 @@ impl FontFace {
 
     pub fn rasterize(&self, input: Option<Vec<char>>, pixel_height: f32) -> Rasterizations {
         let chars = input.unwrap_or(self.chars());
-    
+
         chars
             .iter()
             .map(|c| self.font.rasterize(*c, pixel_height))
             .collect::<Vec<_>>() as Rasterizations
     }
 }
-
-
