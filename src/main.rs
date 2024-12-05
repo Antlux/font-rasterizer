@@ -46,7 +46,7 @@ fn main() -> Result<(), AppError> {
 
     println!(
         "Generating rasterization data for '{}' at a render height of {} pixel(s)... ",
-        font_face.name(),
+        font_face.stem(),
         pixel_height
     );
 
@@ -57,7 +57,7 @@ fn main() -> Result<(), AppError> {
     });
 
     let rendering_layouts = vec![
-        RenderingLayout::Square,
+        RenderingLayout::Squarish,
         RenderingLayout::Horizontal,
         RenderingLayout::Vertical,
     ];
@@ -90,7 +90,12 @@ fn main() -> Result<(), AppError> {
     );
 
     let image = Image::Grayscale(
-        font_face.name().to_owned(),
+        format!(
+            "{}-(w{}-h{})",
+            font_face.stem().to_owned(),
+            max_width,
+            max_height,
+        ),
         pixel_width,
         pixel_height,
         pixels,

@@ -38,7 +38,7 @@ pub fn get_font_face() -> Result<FontFace, AppError> {
         .set_directory("/")
         .pick_file()
         .ok_or(AppError::NoFontPath)?;
-    FontFace::load(font_path.as_path()).map_err(|err| AppError::FontLoadingError(err))
+    FontFace::load(font_path).map_err(|err| AppError::FontLoadingError(err))
 }
 
 pub fn get_input<T>() -> Result<T, <T as FromStr>::Err>

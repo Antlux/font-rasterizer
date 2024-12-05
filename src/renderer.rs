@@ -22,7 +22,7 @@ impl Display for RendererError {
 }
 
 pub enum RenderingLayout {
-    Square,
+    Squarish,
     Horizontal,
     Vertical,
 }
@@ -30,7 +30,7 @@ pub enum RenderingLayout {
 impl Display for RenderingLayout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Square => write!(f, "Square"),
+            Self::Squarish => write!(f, "Squarish"),
             Self::Horizontal => write!(f, "Horizontal"),
             Self::Vertical => write!(f, "Vertical"),
         }
@@ -62,10 +62,12 @@ pub fn generate_image_data(
     let (cell_h_count, cell_v_count) = match rendering_layout {
         RenderingLayout::Horizontal => (rasterizations.len(), 1),
         RenderingLayout::Vertical => (1, rasterizations.len()),
-        RenderingLayout::Square => (
-            (rasterizations.len() as f32).sqrt().ceil() as usize,
-            (rasterizations.len() as f32).sqrt().ceil() as usize,
-        ),
+        RenderingLayout::Squarish => {
+            let total_pixels = cell_width * cell_height * rasterizations.len();
+            let target_width = (total_pixels as f32).sqrt().ceil();
+            let h_count = (target_width / (cell_width as f32)).round() as usize;
+            (h_count, rasterizations.len() / h_count)
+        }
     };
 
     let pixel_width = cell_width * cell_h_count;

@@ -1,5 +1,6 @@
 use fontdue::{Font, Metrics};
-use std::{fmt::Display, fs::File, io::Read, path::Path};
+use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
+
 pub enum RasterizationProperty {
     Brightness,
     Width,
@@ -71,13 +72,13 @@ impl Display for FontFaceError {
 
 pub struct FontFace {
     font: Font,
-    name: String,
+    path: PathBuf,
 }
 
 impl FontFace {
-    pub fn load(font_path: &Path) -> Result<Self, FontFaceError> {
+    pub fn load(font_path: PathBuf) -> Result<Self, FontFaceError> {
         let mut buf = vec![];
-        let mut file = File::open(font_path).map_err(|_| FontFaceError::FontOpeningError)?;
+        let mut file = File::open(&font_path).map_err(|_| FontFaceError::FontOpeningError)?;
         let _ = file.read_to_end(&mut buf);
 
         Ok(Self {
@@ -85,12 +86,16 @@ impl FontFace {
                 Font::from_bytes(buf, fontdue::FontSettings::default())
                     .map_err(|err| FontFaceError::CreationError(err))?
             },
-            name: font_path.file_name().unwrap().to_str().unwrap().into(),
+            path: font_path,
         })
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn stem(&self) -> &str {
+        self.path.file_stem().unwrap().to_str().unwrap().into()
+    }
+
+    pub fn path(&self) -> &str {
+        self.path.to_str().unwrap()
     }
 
     pub fn chars(&self) -> Vec<char> {
