@@ -6,14 +6,14 @@ pub enum RasterizationProperty {
     Height,
 }
 
-pub type Rasterization = (Metrics, Vec<u8>);
+pub type CharRaster = (Metrics, Vec<u8>);
 pub trait RasterInfo {
     fn get_brightness(&self) -> usize;
     fn get_width(&self) -> usize;
     fn get_height(&self) -> usize;
 }
 
-impl RasterInfo for Rasterization {
+impl RasterInfo for CharRaster {
     fn get_brightness(&self) -> usize {
         let (_, data) = &self;
         data.into_iter().map(|v| v.to_owned() as usize).sum()
@@ -28,7 +28,7 @@ impl RasterInfo for Rasterization {
     }
 }
 
-pub type Rasterizations = Vec<Rasterization>;
+pub type Rasterizations = Vec<CharRaster>;
 pub trait RasterManip {
     fn sort_rasters_by(&mut self, property: RasterizationProperty);
     fn dedup_rasters_by(&mut self, property: RasterizationProperty);
@@ -54,6 +54,7 @@ impl RasterManip for Rasterizations {
     }
 }
 
+#[derive(Debug)]
 pub enum FontFaceError {
     FontOpeningError,
     CreationError(&'static str),
