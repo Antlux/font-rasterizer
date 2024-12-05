@@ -2,7 +2,7 @@ use dialoguer::Select;
 
 use rasterizer::{
     app::{self, get_input, AppError},
-    rasterization::Rasterizations,
+    rasterization::{RasterManip, RasterizationProperty, Rasterizations},
     renderer::{generate_image_data, write_image, Image, RenderingLayout},
 };
 
@@ -50,7 +50,7 @@ fn main() -> Result<(), AppError> {
         pixel_height
     );
 
-    let rasterizations: Rasterizations = font_face.rasterize(None, pixel_height);
+    let mut rasterizations: Rasterizations = font_face.rasterize(None, pixel_height);
 
     println!("Done, generated {} character rasterizations", {
         rasterizations.len()
@@ -69,6 +69,66 @@ fn main() -> Result<(), AppError> {
         .unwrap();
 
     let rendering_layout = rendering_layouts.into_iter().nth(layout_selection).unwrap();
+
+    let properties = vec![
+        None,
+        Some(RasterizationProperty::Brightness),
+        Some(RasterizationProperty::Width),
+        Some(RasterizationProperty::Height),
+    ];
+
+    let sort_property_selection = Select::new()
+        .with_prompt("Please select a property to sort by")
+        .items(
+            &properties
+                .iter()
+                .map(|o| {
+                    if let Some(p) = o {
+                        p.to_string()
+                    } else {
+                        "None".to_owned()
+                    }
+                })
+                .collect::<Vec<String>>(),
+        )
+        .interact()
+        .unwrap();
+
+    let sort_property = properties.iter().nth(sort_property_selection).unwrap();
+
+    if let Some(p) = sort_property {
+        rasterizations.sort_rasters_by(p.to_owned());
+    }
+
+    let property_duplicate_text = &properties
+        .iter()
+        .map(|o| {
+            if let Some(p) = o {
+                format!(
+                    "{} - {} duplicate(s)",
+                    p,
+                    rasterizations.count_duplicates(p.to_owned())
+                )
+            } else {
+                "None".to_owned()
+            }
+        })
+        .collect::<Vec<String>>();
+
+    let dedup_property_selection = Select::new()
+        .with_prompt("Please select a property to remove duplicates")
+        .items(property_duplicate_text)
+        .interact()
+        .unwrap();
+
+    let dedup_property = properties
+        .into_iter()
+        .nth(dedup_property_selection)
+        .unwrap();
+
+    if let Some(p) = dedup_property {
+        rasterizations.dedup_rasters_by(p);
+    }
 
     let max_width = rasterizations
         .iter()

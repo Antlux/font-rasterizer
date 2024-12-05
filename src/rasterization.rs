@@ -1,20 +1,40 @@
 use fontdue::{Font, Metrics};
-use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
+use std::{collections::HashMap, fmt::Display, fs::File, io::Read, path::PathBuf};
 
+#[derive(Clone, Copy)]
 pub enum RasterizationProperty {
     Brightness,
     Width,
     Height,
 }
 
+impl Display for RasterizationProperty {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Brightness => write!(f, "Brightness"),
+            Self::Width => write!(f, "Width"),
+            Self::Height => write!(f, "Height"),
+        }
+    }
+}
+
 pub type CharRaster = (Metrics, Vec<u8>);
 pub trait RasterInfo {
+    fn get_property(&self, property: RasterizationProperty) -> usize;
     fn get_brightness(&self) -> usize;
     fn get_width(&self) -> usize;
     fn get_height(&self) -> usize;
 }
 
 impl RasterInfo for CharRaster {
+    fn get_property(&self, property: RasterizationProperty) -> usize {
+        match property {
+            RasterizationProperty::Brightness => self.get_brightness(),
+            RasterizationProperty::Width => self.get_width(),
+            RasterizationProperty::Height => self.get_height(),
+        }
+    }
+
     fn get_brightness(&self) -> usize {
         let (_, data) = &self;
         data.into_iter().map(|v| v.to_owned() as usize).sum()
@@ -31,11 +51,25 @@ impl RasterInfo for CharRaster {
 
 pub type Rasterizations = Vec<CharRaster>;
 pub trait RasterManip {
+    fn count_duplicates(&self, property: RasterizationProperty) -> usize;
     fn sort_rasters_by(&mut self, property: RasterizationProperty);
     fn dedup_rasters_by(&mut self, property: RasterizationProperty);
 }
 
 impl RasterManip for Rasterizations {
+    fn count_duplicates(&self, property: RasterizationProperty) -> usize {
+        let mut counter: HashMap<usize, usize> = HashMap::new();
+        for raster in self {
+            let value = raster.get_property(property);
+            if let Some(count) = counter.get_mut(&value) {
+                *count += 1;
+            } else {
+                counter.insert(value, 1);
+            }
+        }
+        counter.values().into_iter().map(|e| e - 1).sum::<usize>()
+    }
+
     fn sort_rasters_by(&mut self, property: RasterizationProperty) {
         match property {
             RasterizationProperty::Brightness => {
