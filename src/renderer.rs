@@ -48,17 +48,6 @@ pub fn generate_image_data(
     rasterizations: Rasterizations,
     rendering_layout: RenderingLayout,
 ) -> (usize, usize, Vec<u8>) {
-    let rasterizations = rasterizations
-        .into_iter()
-        .filter(|(m, _)| {
-            (m.xmin >= 0)
-                && (m.xmin + m.width as i32 <= cell_width as i32)
-                && (invert_ymin(m.ymin, pixel_height as usize, m.height) >= 0)
-                && (m.height as i32 + invert_ymin(m.ymin, pixel_height as usize, m.height)
-                    <= cell_height as i32)
-        })
-        .collect::<Rasterizations>();
-
     let (cell_h_count, cell_v_count) = match rendering_layout {
         RenderingLayout::Horizontal => (rasterizations.len(), 1),
         RenderingLayout::Vertical => (1, rasterizations.len()),
@@ -70,24 +59,34 @@ pub fn generate_image_data(
         }
     };
 
-    let pixel_width = cell_width * cell_h_count;
-    let pixel_height = cell_height * cell_v_count;
-    let mut pixels = vec![0u8; pixel_width * pixel_height];
+    let texture_width = cell_width * cell_h_count;
+    let texture_height = cell_height * cell_v_count;
+    let mut pixels = vec![0u8; texture_width * texture_height];
 
     for (i, (metrics, rasterization)) in rasterizations.iter().enumerate() {
         let cell_x = i % cell_h_count;
         let cell_y = (i - cell_x) / cell_h_count;
+
         for (i, value) in rasterization.iter().enumerate() {
             let cell_relative_x = i % metrics.width;
             let cell_relative_y = (i - cell_relative_x) / metrics.width;
-            let x = cell_x * cell_width + cell_relative_x;
-            let y = cell_y * cell_height + cell_relative_y;
-            let x = x
-                + ((((cell_width as isize - metrics.width as isize) as f32 / 2.0).ceil() as usize)
-                    .max(0) as usize);
-            let y = y
-                + ((((cell_height as isize - metrics.height as isize) as f32 / 2.0).ceil() as usize)
-                    .max(0) as usize);
+
+            let center_offset_x = (((cell_width as isize) - (metrics.width as isize)) / 2);
+            let center_offset_y = (((cell_height as isize) - (metrics.height as isize)) / 2);
+            // let center_offset_y = (cell_height - metrics.height) as isize;
+
+            // let inverted_ymin =
+            //     cell_height as isize - (metrics.height as isize + metrics.ymin as isize);
+            let inverted_ymin = 0;
+
+            let x = (((cell_x * cell_width) + cell_relative_x) as isize
+                + center_offset_x
+                + metrics.xmin as isize)
+                .max(0) as usize;
+            let y = (((cell_y * cell_height) + cell_relative_y) as isize
+                + center_offset_y
+                + inverted_ymin)
+                .max(0) as usize;
             // let x = (x as i32 + metrics.xmin) as usize + ((cell_width - metrics.width) / 2);
             // let y = (y as i32 + invert_ymin(metrics.ymin, pixel_height as usize, metrics.height))
             //     as usize
@@ -99,7 +98,7 @@ pub fn generate_image_data(
         }
     }
 
-    (pixel_width, pixel_height, pixels)
+    (texture_width, texture_height, pixels)
 }
 
 pub fn write_image(image: Image) -> Result<(), RendererError> {

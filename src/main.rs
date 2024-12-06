@@ -11,28 +11,6 @@ fn main() -> Result<(), AppError> {
 
     let font_face = app::get_font_face()?;
 
-    // println!("Enter cell width (in whole pixels):");
-    // let cell_width;
-    // loop {
-    //     if let Some(width) = get_input::<usize>().ok() {
-    //         cell_width = width;
-    //         break;
-    //     } else {
-    //         println!("Error parsing input. Please enter cell height (in whole pixels):");
-    //     }
-    // }
-
-    // println!("Enter cell height (in whole pixels):");
-    // let cell_height;
-    // loop {
-    //     if let Some(height) = get_input::<usize>().ok() {
-    //         cell_height = height;
-    //         break;
-    //     } else {
-    //         println!("Error parsing input. Please enter cell height (in whole pixels):");
-    //     }
-    // }
-
     println!("Enter font render height (in pixels) :");
     let pixel_height;
     loop {

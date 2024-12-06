@@ -67,6 +67,11 @@ impl RasterManip for Rasterizations {
                 counter.insert(value, 1);
             }
         }
+        println!("Duplicates by value for {}:", property);
+        for (v, c) in counter.iter() {
+            println!("{} : {}", v, c);
+        }
+
         counter.values().into_iter().map(|e| e - 1).sum::<usize>()
     }
 
