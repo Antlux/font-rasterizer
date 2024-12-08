@@ -122,7 +122,7 @@ fn main() -> Result<(), AppError> {
     let (pixel_width, pixel_height, pixels) = generate_image_data(
         max_width,
         max_height,
-        pixel_height,
+        // pixel_height,
         rasterizations,
         rendering_layout,
     );

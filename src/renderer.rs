@@ -37,14 +37,14 @@ impl Display for RenderingLayout {
     }
 }
 
-fn invert_ymin(ymin: i32, pixel_height: usize, height: usize) -> i32 {
-    pixel_height as i32 - ymin - height as i32
-}
+// fn invert_ymin(ymin: i32, pixel_height: usize, height: usize) -> i32 {
+//     pixel_height as i32 - ymin - height as i32
+// }
 
 pub fn generate_image_data(
     cell_width: usize,
     cell_height: usize,
-    pixel_height: f32,
+    // pixel_height: f32,
     rasterizations: Rasterizations,
     rendering_layout: RenderingLayout,
 ) -> (usize, usize, Vec<u8>) {
@@ -71,8 +71,8 @@ pub fn generate_image_data(
             let cell_relative_x = i % metrics.width;
             let cell_relative_y = (i - cell_relative_x) / metrics.width;
 
-            let center_offset_x = (((cell_width as isize) - (metrics.width as isize)) / 2);
-            let center_offset_y = (((cell_height as isize) - (metrics.height as isize)) / 2);
+            let center_offset_x = ((cell_width as isize) - (metrics.width as isize)) / 2;
+            let center_offset_y = ((cell_height as isize) - (metrics.height as isize)) / 2;
             // let center_offset_y = (cell_height - metrics.height) as isize;
 
             // let inverted_ymin =
