@@ -73,7 +73,7 @@ pub fn generate_image_data(
             let total_pixels = cell_width * cell_height * rasterizations.len();
             let target_width = (total_pixels as f32).sqrt().ceil();
             let h_count = (target_width / (cell_width as f32)).round() as usize;
-            (h_count, rasterizations.len() / h_count)
+            (h_count, (rasterizations.len() as f32 / h_count as f32).ceil() as usize)
         }
     };
 
@@ -90,12 +90,12 @@ pub fn generate_image_data(
         let (cell_x, cell_y) = match rendering_direction {
             RenderingDirection::LeftToRight => {
                 let x = i % cell_h_count;
-                let y = (i - x) / cell_h_count;
+                let y = i / cell_h_count;
                 (x, y)
             },
             RenderingDirection::UpToDown => {
-                let y = i % cell_h_count;
-                let x = (i - y) / cell_h_count;
+                let x = i / cell_v_count;
+                let y = i % cell_v_count;
                 (x, y)
             }
         };
