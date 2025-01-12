@@ -3,7 +3,7 @@ use dialoguer::Select;
 use rasterizer::{
     app::{self, get_input, AppError},
     rasterization::{RasterManip, RasterizationProperty, Rasterizations},
-    renderer::{generate_image_data, write_image, Image, RenderingLayout},
+    renderer::{generate_image_data, write_image, Image, RenderingDirection, RenderingLayout},
 };
 
 fn main() -> Result<(), AppError> {
@@ -107,6 +107,17 @@ fn main() -> Result<(), AppError> {
     if let Some(p) = dedup_property {
         rasterizations.dedup_rasters_by(p);
     }
+    
+
+
+    let rendering_directions = vec![RenderingDirection::LeftToRight, RenderingDirection::UpToDown];
+    let rendering_direction_selection = Select::new()
+        .with_prompt("Please select rendering direction")
+        .items(&rendering_directions)
+        .interact()
+        .unwrap();
+    let rendering_direction = rendering_directions.into_iter().nth(rendering_direction_selection).unwrap();
+
 
     let max_width = rasterizations
         .iter()
@@ -125,6 +136,7 @@ fn main() -> Result<(), AppError> {
         // pixel_height,
         rasterizations,
         rendering_layout,
+        rendering_direction
     );
 
     let image = Image::Grayscale(

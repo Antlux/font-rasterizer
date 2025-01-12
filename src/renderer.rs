@@ -37,6 +37,21 @@ impl Display for RenderingLayout {
     }
 }
 
+pub enum RenderingDirection {
+    LeftToRight,
+    UpToDown,
+}
+
+impl Display for RenderingDirection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::LeftToRight => write!(f, "Left to right"),
+            Self::UpToDown => write!(f, "Up to down"),
+        }
+    }
+}
+
+
 // fn invert_ymin(ymin: i32, pixel_height: usize, height: usize) -> i32 {
 //     pixel_height as i32 - ymin - height as i32
 // }
@@ -44,10 +59,13 @@ impl Display for RenderingLayout {
 pub fn generate_image_data(
     cell_width: usize,
     cell_height: usize,
-    // pixel_height: f32,
     rasterizations: Rasterizations,
     rendering_layout: RenderingLayout,
+    rendering_direction: RenderingDirection,
 ) -> (usize, usize, Vec<u8>) {
+
+
+    // Texture dimension in cell counts.
     let (cell_h_count, cell_v_count) = match rendering_layout {
         RenderingLayout::Horizontal => (rasterizations.len(), 1),
         RenderingLayout::Vertical => (1, rasterizations.len()),
@@ -59,38 +77,63 @@ pub fn generate_image_data(
         }
     };
 
+    // Whole texture size in pixels.
     let texture_width = cell_width * cell_h_count;
     let texture_height = cell_height * cell_v_count;
+
+    // Pixel buffer.
     let mut pixels = vec![0u8; texture_width * texture_height];
 
     for (i, (metrics, rasterization)) in rasterizations.iter().enumerate() {
-        let cell_x = i % cell_h_count;
-        let cell_y = (i - cell_x) / cell_h_count;
+
+        // Cell coordinates.
+        let (cell_x, cell_y) = match rendering_direction {
+            RenderingDirection::LeftToRight => {
+                let x = i % cell_h_count;
+                let y = (i - x) / cell_h_count;
+                (x, y)
+            },
+            RenderingDirection::UpToDown => {
+                let y = i % cell_h_count;
+                let x = (i - y) / cell_h_count;
+                (x, y)
+            }
+        };
+
+        // Rasterization offset within cell.
+        let center_offset_x = ((cell_width as isize) - (metrics.width as isize)) / 2;
+        let center_offset_y = ((cell_height as isize) - (metrics.height as isize)) / 2;
 
         for (i, value) in rasterization.iter().enumerate() {
-            let cell_relative_x = i % metrics.width;
-            let cell_relative_y = (i - cell_relative_x) / metrics.width;
+            
+            // Pixel coordinate within character rasterization.
+            let raster_relative_x = i % metrics.width;
+            let raster_relative_y = (i - raster_relative_x) / metrics.width;
 
-            let center_offset_x = ((cell_width as isize) - (metrics.width as isize)) / 2;
-            let center_offset_y = ((cell_height as isize) - (metrics.height as isize)) / 2;
+            // Pixel coordinate within cell.
+            let cell_relative_x = raster_relative_x as isize + center_offset_x;
+            let cell_relative_y = raster_relative_y as isize + center_offset_y;
             // let center_offset_y = (cell_height - metrics.height) as isize;
 
             // let inverted_ymin =
             //     cell_height as isize - (metrics.height as isize + metrics.ymin as isize);
             let inverted_ymin = 0;
 
-            let x = (((cell_x * cell_width) + cell_relative_x) as isize
-                + center_offset_x
+            // Absolute pixel coordinate within texture atlas.
+            let x = ((cell_x * cell_width) as isize 
+                + cell_relative_x
                 + metrics.xmin as isize)
                 .max(0) as usize;
-            let y = (((cell_y * cell_height) + cell_relative_y) as isize
-                + center_offset_y
+            let y = ((cell_y * cell_height) as isize
+                + cell_relative_y
                 + inverted_ymin)
                 .max(0) as usize;
             // let x = (x as i32 + metrics.xmin) as usize + ((cell_width - metrics.width) / 2);
             // let y = (y as i32 + invert_ymin(metrics.ymin, pixel_height as usize, metrics.height))
             //     as usize
             //     + ((cell_height - metrics.height) / 2);
+
+            // Absolute pixel coordinate as index in pixel buffer.
             let index = x + (y * cell_h_count * cell_width);
             if let Some(pixel) = pixels.get_mut(index) {
                 *pixel = *value;
