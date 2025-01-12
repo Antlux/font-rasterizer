@@ -7,9 +7,11 @@ use rasterizer::{
 };
 
 fn main() -> Result<(), AppError> {
-    println!("Please choose a font to rasterize");
+    println!("Please choose a font to rasterize:");
 
     let font_face = app::get_font_face()?;
+
+    println!("{}", font_face.path());
 
     println!("Enter font render height (in pixels) :");
     let pixel_height;
