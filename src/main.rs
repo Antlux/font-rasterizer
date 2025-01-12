@@ -13,7 +13,7 @@ fn main() -> Result<(), AppError> {
 
     println!("{}", font_face.path());
 
-    println!("Enter font render height (in pixels) :");
+    println!("Enter font render height (in pixels):");
     let pixel_height;
     loop {
         if let Some(height) = get_input::<f32>().ok() {
@@ -112,7 +112,7 @@ fn main() -> Result<(), AppError> {
     
 
 
-    let rendering_directions = vec![RenderingDirection::LeftToRight, RenderingDirection::UpToDown];
+    let rendering_directions = vec![RenderingDirection::LeftToRight, RenderingDirection::TopToBottom];
     let rendering_direction_selection = Select::new()
         .with_prompt("Please select rendering direction")
         .items(&rendering_directions)

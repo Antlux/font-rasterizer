@@ -39,14 +39,14 @@ impl Display for RenderingLayout {
 
 pub enum RenderingDirection {
     LeftToRight,
-    UpToDown,
+    TopToBottom,
 }
 
 impl Display for RenderingDirection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::LeftToRight => write!(f, "Left to right"),
-            Self::UpToDown => write!(f, "Up to down"),
+            Self::TopToBottom => write!(f, "Top to bottom"),
         }
     }
 }
@@ -93,7 +93,7 @@ pub fn generate_image_data(
                 let y = i / cell_h_count;
                 (x, y)
             },
-            RenderingDirection::UpToDown => {
+            RenderingDirection::TopToBottom => {
                 let x = i / cell_v_count;
                 let y = i % cell_v_count;
                 (x, y)
