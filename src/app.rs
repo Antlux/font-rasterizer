@@ -4,10 +4,57 @@ use std::{
     str::FromStr,
 };
 
+use eframe::egui;
+
 use crate::{
     rasterization::{FontFace, FontFaceError},
     renderer::RendererError,
 };
+
+
+#[derive(Default)]
+pub struct FontRasterizerApp {
+    font_face: Option<FontFace>
+}
+
+impl FontRasterizerApp {
+    fn load_font(&mut self) {
+        self.font_face = get_font_face().ok();
+    }
+}
+
+impl eframe::App for FontRasterizerApp {
+    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.horizontal(|ui|{
+                ui.heading("Font Rasterizer");
+                ui.separator();
+                ui.label("Font:");
+
+                let button_text = if let Some(font_face) = &self.font_face {
+                    font_face.stem()
+                } else {
+                    "Load"
+                };
+
+                if ui.button(button_text).clicked() {
+                    self.load_font();
+                }
+            });
+            ui.separator();
+        });
+        // egui::SidePanel::right("job-history").show(ctx, |ui| {
+        //     ui.label("Job History");
+        // });
+    }
+}
+
+
+
+
+
+
+
 
 #[derive(Debug)]
 pub enum AppError {
