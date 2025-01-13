@@ -1,51 +1,156 @@
-use std::{
-    fmt::{Debug, Display},
-    io::stdin,
-    str::FromStr,
-};
+use std::
+    fmt::Display
+;
 
-use eframe::egui;
+use eframe::egui::{self, ComboBox, DragValue, Ui};
 
 use crate::{
-    rasterization::{FontFace, FontFaceError},
-    renderer::RendererError,
+    rasterization::{FontFace, FontFaceError, RasterizationProperty},
+    renderer::{RenderDirection, RenderLayout, RenderSettings, RendererError},
 };
 
 
 #[derive(Default)]
 pub struct FontRasterizerApp {
-    font_face: Option<FontFace>
+    font_face: Option<FontFace>,
+    render_settings: RenderSettings
 }
+
 
 impl FontRasterizerApp {
     fn load_font(&mut self) {
         self.font_face = get_font_face().ok();
     }
+
+    fn center_head(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui|{
+            ui.heading("Font Rasterizer");
+            ui.separator();
+            ui.label("Font:");
+
+            let button_text = if let Some(font_face) = &self.font_face {
+                font_face.stem()
+            } else {
+                "Load"
+            };
+
+            if ui.button(button_text).clicked() {
+                self.load_font();
+            }
+        });
+    }
+
+    fn settings_body(&mut self, ui: &mut Ui) {
+        // Render Height
+        ui.add(DragValue::new(&mut self.render_settings.render_height).range(1..=100).speed(0.1));
+
+        // Render Layout
+        ComboBox::from_label("Render Layout")
+            .selected_text(format!("{}", self.render_settings.render_layout.to_string()))
+            .show_ui(ui, |ui| {
+                let layouts = vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical];
+                for l in layouts {
+                    ui.selectable_value(
+                        &mut self.render_settings.render_layout,
+                        l,
+                        l.to_string()
+                    );
+                }
+            });
+        
+        // Render Direction
+        ComboBox::from_label("Render Direction")
+            .selected_text(format!("{}", self.render_settings.render_direction.to_string()))
+            .show_ui(ui, |ui| {
+                let directions = vec![RenderDirection::LeftToRight, RenderDirection::TopToBottom];
+                for d in directions {
+                    ui.selectable_value(
+                        &mut self.render_settings.render_direction,
+                        d,
+                        d.to_string()
+                    );
+                }
+            });
+        
+        // Sort Property
+        ComboBox::from_label("Sort Property")
+            .selected_text(
+                format!("{}", {
+                    if let Some(p) = self.render_settings.sort_property {
+                        p.to_string()
+                    } else {
+                        "None".into()
+                    }
+                })
+            )
+            .show_ui(ui, |ui| {
+                let properties = vec![None, Some(RasterizationProperty::Brightness), Some(RasterizationProperty::Width), Some(RasterizationProperty::Height)];
+                for p in properties {
+                    ui.selectable_value(
+                        &mut self.render_settings.sort_property,
+                        p,
+                        format!("{}", {
+                            if let Some(p) = p {
+                                p.to_string()
+                            } else {
+                                "None".into()
+                            }
+                        })
+                    );
+                }
+            });
+        
+        // Dedup Property
+        ComboBox::from_label("Dedup Property")
+            .selected_text(
+                format!("{}", {
+                    if let Some(p) = self.render_settings.dedup_property {
+                        p.to_string()
+                    } else {
+                        "None".into()
+                    }
+                })
+            )
+            .show_ui(ui, |ui| {
+                let properties = vec![None, Some(RasterizationProperty::Brightness), Some(RasterizationProperty::Width), Some(RasterizationProperty::Height)];
+                for p in properties {
+                    ui.selectable_value(
+                        &mut self.render_settings.dedup_property,
+                        p,
+                        format!("{}", {
+                            if let Some(p) = p {
+                                p.to_string()
+                            } else {
+                                "None".into()
+                            }
+                        })
+                    );
+                }
+            });
+    }
+
+
 }
 
 impl eframe::App for FontRasterizerApp {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui|{
-                ui.heading("Font Rasterizer");
-                ui.separator();
-                ui.label("Font:");
-
-                let button_text = if let Some(font_face) = &self.font_face {
-                    font_face.stem()
-                } else {
-                    "Load"
-                };
-
-                if ui.button(button_text).clicked() {
-                    self.load_font();
-                }
-            });
+            self.center_head(ui);
             ui.separator();
+            
         });
-        // egui::SidePanel::right("job-history").show(ctx, |ui| {
-        //     ui.label("Job History");
-        // });
+
+        if let Some(_font_face) = &self.font_face {
+            egui::SidePanel::right("side-panel")
+            .resizable(false)
+            .show(ctx, |ui| {
+                ui.heading("Render Settings");
+                ui.separator();
+                self.settings_body(ui);
+                ui.separator()
+                // Export History
+            });
+        }
     }
 }
 
@@ -88,12 +193,12 @@ pub fn get_font_face() -> Result<FontFace, AppError> {
     FontFace::load(font_path).map_err(|err| AppError::FontLoadingError(err))
 }
 
-pub fn get_input<T>() -> Result<T, <T as FromStr>::Err>
-where
-    T: ToString + FromStr,
-    <T as FromStr>::Err: Debug,
-{
-    let mut input_buf = String::new();
-    let _ = stdin().read_line(&mut input_buf);
-    input_buf.trim().split(' ').next().unwrap().parse::<T>()
-}
+// pub fn get_input<T>() -> Result<T, <T as FromStr>::Err>
+// where
+//     T: ToString + FromStr,
+//     <T as FromStr>::Err: Debug,
+// {
+//     let mut input_buf = String::new();
+//     let _ = stdin().read_line(&mut input_buf);
+//     input_buf.trim().split(' ').next().unwrap().parse::<T>()
+// }

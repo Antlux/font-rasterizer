@@ -1,6 +1,6 @@
 use std::{fmt::Display, fs::File, io::BufWriter};
 
-use crate::rasterization::Rasterizations;
+use crate::rasterization::{RasterizationProperty, Rasterizations};
 
 pub enum Image {
     Grayscale(String, usize, usize, Vec<u8>),
@@ -21,13 +21,35 @@ impl Display for RendererError {
     }
 }
 
-pub enum RenderingLayout {
+
+pub struct RenderSettings {
+    pub render_height: f32,
+    pub render_layout: RenderLayout,
+    pub render_direction: RenderDirection,
+    pub sort_property: Option<RasterizationProperty>,
+    pub dedup_property: Option<RasterizationProperty>,
+}
+
+impl Default for RenderSettings {
+    fn default() -> Self {
+        Self {
+            render_height: 8.0,
+            render_layout: RenderLayout::Squarish,
+            render_direction: RenderDirection::LeftToRight,
+            sort_property: Some(RasterizationProperty::Brightness),
+            dedup_property: Some(RasterizationProperty::Brightness),
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum RenderLayout {
     Squarish,
     Horizontal,
     Vertical,
 }
 
-impl Display for RenderingLayout {
+impl Display for RenderLayout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Squarish => write!(f, "Squarish"),
@@ -37,12 +59,13 @@ impl Display for RenderingLayout {
     }
 }
 
-pub enum RenderingDirection {
+#[derive(PartialEq, Clone, Copy)]
+pub enum RenderDirection {
     LeftToRight,
     TopToBottom,
 }
 
-impl Display for RenderingDirection {
+impl Display for RenderDirection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::LeftToRight => write!(f, "Left to right"),
@@ -60,16 +83,16 @@ pub fn generate_image_data(
     cell_width: usize,
     cell_height: usize,
     rasterizations: Rasterizations,
-    rendering_layout: RenderingLayout,
-    rendering_direction: RenderingDirection,
+    rendering_layout: RenderLayout,
+    rendering_direction: RenderDirection,
 ) -> (usize, usize, Vec<u8>) {
 
 
     // Texture dimension in cell counts.
     let (cell_h_count, cell_v_count) = match rendering_layout {
-        RenderingLayout::Horizontal => (rasterizations.len(), 1),
-        RenderingLayout::Vertical => (1, rasterizations.len()),
-        RenderingLayout::Squarish => {
+        RenderLayout::Horizontal => (rasterizations.len(), 1),
+        RenderLayout::Vertical => (1, rasterizations.len()),
+        RenderLayout::Squarish => {
             let total_pixels = cell_width * cell_height * rasterizations.len();
             let target_width = (total_pixels as f32).sqrt().ceil();
             let h_count = (target_width / (cell_width as f32)).round() as usize;
@@ -88,12 +111,12 @@ pub fn generate_image_data(
 
         // Cell coordinates.
         let (cell_x, cell_y) = match rendering_direction {
-            RenderingDirection::LeftToRight => {
+            RenderDirection::LeftToRight => {
                 let x = i % cell_h_count;
                 let y = i / cell_h_count;
                 (x, y)
             },
-            RenderingDirection::TopToBottom => {
+            RenderDirection::TopToBottom => {
                 let x = i / cell_v_count;
                 let y = i % cell_v_count;
                 (x, y)

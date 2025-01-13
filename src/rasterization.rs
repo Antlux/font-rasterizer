@@ -1,7 +1,7 @@
 use fontdue::{Font, Metrics};
 use std::{collections::HashMap, fmt::Display, fs::File, io::Read, path::PathBuf};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum RasterizationProperty {
     Brightness,
     Width,
@@ -17,6 +17,7 @@ impl Display for RasterizationProperty {
         }
     }
 }
+
 
 pub type CharRaster = (Metrics, Vec<u8>);
 pub trait RasterInfo {
