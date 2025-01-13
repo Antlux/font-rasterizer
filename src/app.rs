@@ -2,18 +2,20 @@ use std::
     fmt::Display
 ;
 
-use eframe::egui::{self, ComboBox, DragValue, Ui};
+use eframe::egui::{self, load::SizedTexture, ColorImage, ComboBox, DragValue, Image, ImageData, TextureOptions, Ui};
 
 use crate::{
     rasterization::{FontFace, FontFaceError, RasterizationProperty},
-    renderer::{RenderDirection, RenderLayout, RenderSettings, RendererError},
+    renderer::{render_image, RenderDirection, RenderLayout, RenderSettings, RendererError},
 };
 
 
 #[derive(Default)]
 pub struct FontRasterizerApp {
     font_face: Option<FontFace>,
-    render_settings: RenderSettings
+    render_settings: RenderSettings,
+    rendered: bool,
+    render: Option<ColorImage>
 }
 
 
@@ -134,13 +136,7 @@ impl FontRasterizerApp {
 
 impl eframe::App for FontRasterizerApp {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            self.center_head(ui);
-            ui.separator();
-            
-        });
-
-        if let Some(_font_face) = &self.font_face {
+        if self.font_face.is_some() {
             egui::SidePanel::right("side-panel")
             .resizable(false)
             .show(ctx, |ui| {
@@ -151,6 +147,43 @@ impl eframe::App for FontRasterizerApp {
                 // Export History
             });
         }
+        
+        egui::CentralPanel::default().show(ctx, |ui| {
+            self.center_head(ui);
+            ui.separator();
+            if let Some(img) = &self.render {
+                let render_img = ui.ctx().load_texture(
+                    "render", 
+                    ImageData::from(img.to_owned()), 
+                    TextureOptions::NEAREST
+                );
+                
+                // ui.add(ImageButton::new(Image::new(&render_img)));
+                ui.centered_and_justified(|ui| {
+                    ui.add(
+                        Image::from_texture(
+                            SizedTexture::from_handle(&render_img))
+                    );
+                });
+                // ui.image(Image::new(&render_img));
+            }
+        });
+
+        
+
+        if let Some(font_face) = self.font_face.as_ref() {
+            if !self.rendered {
+                self.rendered = true;
+                let rasterizations = font_face.rasterize(None, self.render_settings.render_height);
+                self.render = Some(render_image(
+                    rasterizations,
+                    &self.render_settings
+                ));
+            }
+        }
+
+
+        
     }
 }
 
@@ -202,3 +235,4 @@ pub fn get_font_face() -> Result<FontFace, AppError> {
 //     let _ = stdin().read_line(&mut input_buf);
 //     input_buf.trim().split(' ').next().unwrap().parse::<T>()
 // }
+

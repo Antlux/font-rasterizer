@@ -7,12 +7,14 @@ use rasterizer::
 
 
 fn main() -> Result {
-    let app = FontRasterizerApp::default();
     let native_options = NativeOptions::default();
     run_native(
         "Font Rasterizer", 
-        native_options,
-        Box::new(|_cc| Ok(Box::new(app)))
+        native_options, 
+        Box::new(|cc| {
+            egui_extras::install_image_loaders(&cc.egui_ctx);
+            Ok(Box::<FontRasterizerApp>::default())
+        })
     )
 }
 

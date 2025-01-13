@@ -1,6 +1,8 @@
 use std::{fmt::Display, fs::File, io::BufWriter};
 
-use crate::rasterization::{RasterizationProperty, Rasterizations};
+use eframe::egui::ColorImage;
+
+use crate::rasterization::{RasterManip, RasterizationProperty, Rasterizations};
 
 pub enum Image {
     Grayscale(String, usize, usize, Vec<u8>),
@@ -80,16 +82,27 @@ impl Display for RenderDirection {
 // }
 
 pub fn generate_image_data(
-    cell_width: usize,
-    cell_height: usize,
     rasterizations: Rasterizations,
-    rendering_layout: RenderLayout,
-    rendering_direction: RenderDirection,
+    render_settings: &RenderSettings,
+    // rendering_layout: RenderLayout,
+    // rendering_direction: RenderDirection,
 ) -> (usize, usize, Vec<u8>) {
+
+    let cell_width = rasterizations
+        .iter()
+        .map(|(m, _)| m.width)
+        .max()
+        .unwrap_or(render_settings.render_height.ceil() as usize);
+    let cell_height = rasterizations
+        .iter()
+        .map(|(m, _)| m.height)
+        .max()
+        .unwrap_or(render_settings.render_height.ceil() as usize);
+
 
 
     // Texture dimension in cell counts.
-    let (cell_h_count, cell_v_count) = match rendering_layout {
+    let (cell_h_count, cell_v_count) = match render_settings.render_layout {
         RenderLayout::Horizontal => (rasterizations.len(), 1),
         RenderLayout::Vertical => (1, rasterizations.len()),
         RenderLayout::Squarish => {
@@ -110,7 +123,7 @@ pub fn generate_image_data(
     for (i, (metrics, rasterization)) in rasterizations.iter().enumerate() {
 
         // Cell coordinates.
-        let (cell_x, cell_y) = match rendering_direction {
+        let (cell_x, cell_y) = match render_settings.render_direction {
             RenderDirection::LeftToRight => {
                 let x = i % cell_h_count;
                 let y = i / cell_h_count;
@@ -166,6 +179,28 @@ pub fn generate_image_data(
 
     (texture_width, texture_height, pixels)
 }
+
+
+pub fn render_image(
+    mut rasterizations: Rasterizations,
+    render_settings: &RenderSettings
+) -> ColorImage {
+
+    if let Some(p) = render_settings.sort_property {
+        rasterizations.sort_rasters_by(p);
+    }
+
+    if let Some(p) = render_settings.dedup_property {
+        rasterizations.dedup_rasters_by(p);
+    }
+
+
+    let (width, height, data) = generate_image_data(rasterizations, render_settings);
+    ColorImage::from_gray([width, height], &data)
+}
+
+
+
 
 pub fn write_image(image: Image) -> Result<(), RendererError> {
     let Image::Grayscale(name, width, height, data) = image;
