@@ -29,6 +29,7 @@ pub struct RenderSettings {
     pub render_direction: RenderDirection,
     pub sort_property: Option<RasterizationProperty>,
     pub dedup_property: Option<RasterizationProperty>,
+    pub dedup_exact_duplicate: bool,
 }
 
 impl Default for RenderSettings {
@@ -39,6 +40,7 @@ impl Default for RenderSettings {
             render_direction: RenderDirection::LeftToRight,
             sort_property: Some(RasterizationProperty::Brightness),
             dedup_property: Some(RasterizationProperty::Brightness),
+            dedup_exact_duplicate: false
         }
     }
 }

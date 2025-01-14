@@ -35,11 +35,13 @@ impl FontRasterizerApp {
 
             if let Some(p) = self.render_settings.dedup_property {
                 rasterizations.dedup_rasters_by(p);
+            } else if self.render_settings.dedup_exact_duplicate {
+                rasterizations.dedup_exact_duplicate();
             }
 
             if let Some(p) = self.render_settings.sort_property {
                 rasterizations.sort_rasters_by(p);
-            }
+            } 
 
             let (render_data, render_info) = generate_render_data(rasterizations, &self.render_settings);
 
@@ -193,6 +195,10 @@ impl FontRasterizerApp {
                     };
                 }
             });
+        
+        if self.render_settings.dedup_property.is_none() {
+            if ui.checkbox(&mut self.render_settings.dedup_exact_duplicate, "Remove only exact duplicates").changed() {self.render_font();};
+        }
     }
 
 }

@@ -55,6 +55,7 @@ pub trait RasterManip {
     fn count_duplicates(&self, property: RasterizationProperty) -> usize;
     fn sort_rasters_by(&mut self, property: RasterizationProperty);
     fn dedup_rasters_by(&mut self, property: RasterizationProperty);
+    fn dedup_exact_duplicate(&mut self);
 }
 
 impl RasterManip for Rasterizations {
@@ -84,6 +85,7 @@ impl RasterManip for Rasterizations {
         //     _ => {}
         // }
     }
+    
     fn dedup_rasters_by(&mut self, property: RasterizationProperty) {
 
         let mut set = HashSet::new();
@@ -108,6 +110,11 @@ impl RasterManip for Rasterizations {
         //     RasterizationProperty::Width => self.dedup_by(|a, b| a.get_width() == b.get_width()),
         //     RasterizationProperty::Height => self.dedup_by(|a, b| a.get_height() == b.get_height()),
         // }
+    }
+
+    fn dedup_exact_duplicate(&mut self) {
+        let mut set = HashSet::new();
+        self.retain(|(_, p)| set.insert(p.clone()));
     }
 }
 
