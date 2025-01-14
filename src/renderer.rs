@@ -22,7 +22,7 @@ impl Display for RendererError {
     }
 }
 
-
+#[derive(Clone)]
 pub struct RenderSettings {
     pub render_height: f32,
     pub render_layout: RenderLayout,
@@ -95,7 +95,7 @@ impl From<RenderData> for ColorImage {
 }
 
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct RenderInfo {
     pub cell_size: (usize, usize),
     pub cell_count: (usize, usize)

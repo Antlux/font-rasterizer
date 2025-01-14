@@ -16,7 +16,7 @@ pub struct FontRasterizerApp {
     render_settings: RenderSettings,
     render_data: RenderData,
     render_info: RenderInfo,
-    render: Option<ColorImage>
+    render: Option<ColorImage>,
 }
 
 
@@ -51,7 +51,7 @@ impl FontRasterizerApp {
         }
     }
 
-    fn export_texture(&self) {
+    fn export_texture(&mut self) {
         if let Some(font_face) = &self.font_face {
             let (cell_width, cell_height) = self.render_info.cell_size;
             let (cell_h_count, cell_v_count) = self.render_info.cell_count;
@@ -63,39 +63,44 @@ impl FontRasterizerApp {
     }
 
     fn header(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui|{
+        ui.vertical(|ui|{
             ui.heading("Font Rasterizer");
 
             ui.separator();
 
-            ui.label("Font:");
-            if ui.button(
-                if let Some(font_face) = &self.font_face {
-                    font_face.stem()
-                } else {
-                    "Load"
+            ui.horizontal(|ui| {
+                ui.label("Font:");
+                if ui.button(
+                    if let Some(font_face) = &self.font_face {
+                        font_face.stem()
+                    } else {
+                        "Load"
+                    }
+                ).clicked() {
+                    self.load_font();
                 }
-            ).clicked() {
-                self.load_font();
-            }
-
-            if self.render.is_some() {
-                ui.separator();
-
-                if ui.button("Export Texture").clicked() {
-                    self.export_texture();
+                if self.render.is_some() {
+                    ui.separator();
+    
+                    if ui.button("Export Texture").clicked() {
+                        self.export_texture();
+                    }
                 }
-            }
+            });
+
         });
     }
 
     fn settings_body(&mut self, ui: &mut Ui) {
 
+        ui.horizontal(|ui| {
+            ui.label("Render Height");
+            let resp = ui.add(DragValue::new(&mut self.render_settings.render_height).range(1..=100).speed(0.1));
+            if resp.drag_stopped() || resp.lost_focus() {
+                self.render_font();
+            }
+        });
         // Render Height
-        let resp = ui.add(DragValue::new(&mut self.render_settings.render_height).range(1..=100).speed(0.1));
-        if resp.drag_stopped() || resp.lost_focus() {
-            self.render_font();
-        }
 
         // Render Layout
         ComboBox::from_label("Render Layout")
@@ -189,26 +194,29 @@ impl FontRasterizerApp {
                 }
             });
     }
+
 }
 
 impl eframe::App for FontRasterizerApp {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        if self.font_face.is_some() {
-            egui::SidePanel::right("side-panel")
-            .resizable(false)
-            .show(ctx, |ui| {
+        
+        egui::SidePanel::left("side-panel")
+        .resizable(false)
+        .show(ctx, |ui| {
+            self.header(ui);
+            ui.separator();
+            if self.font_face.is_some() {
                 ui.heading("Render Settings");
                 ui.separator();
                 self.settings_body(ui);
-                ui.separator()
-                // Export History
-            });
-        }
+            }
 
-        egui::TopBottomPanel::top("top-panel").show(ctx, |ui| {
-            self.header(ui);
         });
-        
+
+        egui::TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
+            ui.hyperlink_to("Font Rasterizer on Github", "https://github.com/Antlux/font-rasterizer.git")
+        });
+
         egui::CentralPanel::default().show(ctx, |ui| {
             if let Some(img) = &self.render {
                 let render_img = ui.ctx().load_texture(
