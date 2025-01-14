@@ -56,7 +56,9 @@ impl FontRasterizerApp {
             let (cell_width, cell_height) = self.render_info.cell_size;
             let (cell_h_count, cell_v_count) = self.render_info.cell_count;
             let texture_name = format!("{}-({}w-{}h)-({}H-{}V)", font_face.stem(), cell_width, cell_height, cell_h_count, cell_v_count);
-            write_image(texture_name, &self.render_data).unwrap();
+            if let Err(err) = write_image(texture_name, &self.render_data) {
+                eprintln!("{}", err);
+            }
         }
     }
 
@@ -77,9 +79,9 @@ impl FontRasterizerApp {
                 self.load_font();
             }
 
-            ui.separator();
-
             if self.render.is_some() {
+                ui.separator();
+
                 if ui.button("Export Texture").clicked() {
                     self.export_texture();
                 }
@@ -187,8 +189,6 @@ impl FontRasterizerApp {
                 }
             });
     }
-
-
 }
 
 impl eframe::App for FontRasterizerApp {
