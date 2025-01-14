@@ -2,16 +2,14 @@ use std::{fmt::Display, fs::File, io::BufWriter};
 
 use eframe::egui::ColorImage;
 
-use crate::rasterization::{RasterManip, RasterizationProperty, Rasterizations};
+use crate::rasterization::{RasterizationProperty, Rasterizations};
 
-pub enum Image {
-    Grayscale(String, usize, usize, Vec<u8>),
-}
 
 #[derive(Debug)]
 pub enum RendererError {
     InvalidPath,
     CreationError,
+    TooLarge,
 }
 
 impl Display for RendererError {
@@ -19,6 +17,7 @@ impl Display for RendererError {
         match self {
             Self::InvalidPath => write!(f, "Path provided is invalid"),
             Self::CreationError => write!(f, "Encountered error creating render file"),
+            Self::TooLarge => write!(f, "Texture too large"),
         }
     }
 }
@@ -76,17 +75,37 @@ impl Display for RenderDirection {
     }
 }
 
+#[derive(Default, Clone)]
+pub struct RenderData {
+    width: usize,
+    height: usize,
+    pixels: Vec<u8>,
+}
 
-// fn invert_ymin(ymin: i32, pixel_height: usize, height: usize) -> i32 {
-//     pixel_height as i32 - ymin - height as i32
-// }
+impl RenderData {
+    pub fn renderable(&self) -> bool {
+        self.width.max(self.height) <= 16384
+    }
+}
 
-pub fn generate_image_data(
+impl From<RenderData> for ColorImage {
+    fn from(value: RenderData) -> Self {
+        ColorImage::from_gray([value.width, value.height], &value.pixels)
+    }
+}
+
+
+#[derive(Default)]
+pub struct RenderInfo {
+    pub cell_size: (usize, usize),
+    pub cell_count: (usize, usize)
+}
+
+
+pub fn generate_render_data(
     rasterizations: Rasterizations,
     render_settings: &RenderSettings,
-    // rendering_layout: RenderLayout,
-    // rendering_direction: RenderDirection,
-) -> (usize, usize, Vec<u8>) {
+) -> (RenderData,  RenderInfo) {
 
     let cell_width = rasterizations
         .iter()
@@ -114,11 +133,11 @@ pub fn generate_image_data(
     };
 
     // Whole texture size in pixels.
-    let texture_width = cell_width * cell_h_count;
-    let texture_height = cell_height * cell_v_count;
+    let width = cell_width * cell_h_count;
+    let height = cell_height * cell_v_count;
 
     // Pixel buffer.
-    let mut pixels = vec![0u8; texture_width * texture_height];
+    let mut pixels = vec![0u8; width * height];
 
     for (i, (metrics, rasterization)) in rasterizations.iter().enumerate() {
 
@@ -177,41 +196,60 @@ pub fn generate_image_data(
         }
     }
 
-    (texture_width, texture_height, pixels)
+    (
+        RenderData {
+            width,
+            height,
+            pixels
+        },
+        RenderInfo {
+            cell_size: (cell_width, cell_width),
+            cell_count: (cell_h_count, cell_v_count)
+        }
+    )
+    // (texture_width, texture_height, pixels)
 }
 
 
-pub fn render_image(
-    mut rasterizations: Rasterizations,
-    render_settings: &RenderSettings
-) -> ColorImage {
+// pub fn render_image(
+//     mut rasterizations: Rasterizations,
+//     render_settings: &RenderSettings
+// ) -> Result<ColorImage, RendererError>  {
 
-    if let Some(p) = render_settings.sort_property {
-        rasterizations.sort_rasters_by(p);
-    }
+//     if let Some(p) = render_settings.sort_property {
+//         rasterizations.sort_rasters_by(p);
+//     }
 
-    if let Some(p) = render_settings.dedup_property {
-        rasterizations.dedup_rasters_by(p);
-    }
+//     if let Some(p) = render_settings.dedup_property {
+//         rasterizations.dedup_rasters_by(p);
+//     }
+
+//     let (render_data, _render_info) = generate_render_data(rasterizations, render_settings);
+
+//     if render_data.width.max(render_data.height) <= 16384 {
+//         Ok(ColorImage::from_gray([render_data.width, render_data.height], &render_data.pixels))
+//     } else {
+//         Err(RendererError::TooLarge)
+//     }
+// }
 
 
-    let (width, height, data) = generate_image_data(rasterizations, render_settings);
-    ColorImage::from_gray([width, height], &data)
-}
+pub fn write_image(name: String, render_data: &RenderData) -> Result<(), RendererError> {
 
+    let width = render_data.width;
+    let height = render_data.height;
+    let pixels = &render_data.pixels;
 
-
-
-pub fn write_image(image: Image) -> Result<(), RendererError> {
-    let Image::Grayscale(name, width, height, data) = image;
-
-    let mut render_path = rfd::FileDialog::new()
+    let render_path = rfd::FileDialog::new()
         .set_directory("/")
         .add_filter("png", &["png"])
-        .pick_folder()
+        .set_file_name(name)
+        .save_file()
         .ok_or(RendererError::InvalidPath)?;
 
-    render_path.push(format!("{}.png", name));
+    println!("{}", render_path.to_str().unwrap());
+    
+    // render_path.push(!("{}.png"));
 
     println!("Trying to create file at {}", render_path.display());
 
@@ -233,7 +271,7 @@ pub fn write_image(image: Image) -> Result<(), RendererError> {
     encoder.set_source_chromaticities(source_chromaticities);
 
     let mut writer = encoder.write_header().unwrap();
-    writer.write_image_data(&data).unwrap();
+    writer.write_image_data(pixels).unwrap();
 
     Ok(())
 }

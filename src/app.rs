@@ -5,8 +5,8 @@ use std::
 use eframe::egui::{self, load::SizedTexture, ColorImage, ComboBox, DragValue, Image, ImageData, TextureOptions, Ui};
 
 use crate::{
-    rasterization::{FontFace, FontFaceError, RasterizationProperty},
-    renderer::{render_image, RenderDirection, RenderLayout, RenderSettings, RendererError},
+    rasterization::{FontFace, FontFaceError, RasterManip, RasterizationProperty},
+    renderer::{generate_render_data, write_image, RenderData, RenderDirection, RenderInfo, RenderLayout, RenderSettings, RendererError},
 };
 
 
@@ -14,37 +14,86 @@ use crate::{
 pub struct FontRasterizerApp {
     font_face: Option<FontFace>,
     render_settings: RenderSettings,
-    rendered: bool,
+    render_data: RenderData,
+    render_info: RenderInfo,
     render: Option<ColorImage>
 }
 
 
 impl FontRasterizerApp {
     fn load_font(&mut self) {
-        self.font_face = get_font_face().ok();
+        if let Ok(font_face) = get_font_face() {
+            self.font_face = Some(font_face);
+        }
+        self.render_font();
     }
 
-    fn center_head(&mut self, ui: &mut Ui) {
+    fn render_font(&mut self) {
+        if let Some(font_face) = &self.font_face {
+            
+            let mut rasterizations = font_face.rasterize(None, self.render_settings.render_height);
+
+            if let Some(p) = self.render_settings.dedup_property {
+                rasterizations.dedup_rasters_by(p);
+            }
+
+            if let Some(p) = self.render_settings.sort_property {
+                rasterizations.sort_rasters_by(p);
+            }
+
+            let (render_data, render_info) = generate_render_data(rasterizations, &self.render_settings);
+
+            if render_data.renderable() {
+                self.render_data = render_data.clone();
+                self.render_info = render_info;
+                self.render = Some(ColorImage::from(render_data));
+            }
+        }
+    }
+
+    fn export_texture(&self) {
+        if let Some(font_face) = &self.font_face {
+            let (cell_width, cell_height) = self.render_info.cell_size;
+            let (cell_h_count, cell_v_count) = self.render_info.cell_count;
+            let texture_name = format!("{}-({}w-{}h)-({}H-{}V)", font_face.stem(), cell_width, cell_height, cell_h_count, cell_v_count);
+            write_image(texture_name, &self.render_data).unwrap();
+        }
+    }
+
+    fn header(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui|{
             ui.heading("Font Rasterizer");
+
             ui.separator();
+
             ui.label("Font:");
-
-            let button_text = if let Some(font_face) = &self.font_face {
-                font_face.stem()
-            } else {
-                "Load"
-            };
-
-            if ui.button(button_text).clicked() {
+            if ui.button(
+                if let Some(font_face) = &self.font_face {
+                    font_face.stem()
+                } else {
+                    "Load"
+                }
+            ).clicked() {
                 self.load_font();
+            }
+
+            ui.separator();
+
+            if self.render.is_some() {
+                if ui.button("Export Texture").clicked() {
+                    self.export_texture();
+                }
             }
         });
     }
 
     fn settings_body(&mut self, ui: &mut Ui) {
+
         // Render Height
-        ui.add(DragValue::new(&mut self.render_settings.render_height).range(1..=100).speed(0.1));
+        let resp = ui.add(DragValue::new(&mut self.render_settings.render_height).range(1..=100).speed(0.1));
+        if resp.drag_stopped() || resp.lost_focus() {
+            self.render_font();
+        }
 
         // Render Layout
         ComboBox::from_label("Render Layout")
@@ -52,11 +101,13 @@ impl FontRasterizerApp {
             .show_ui(ui, |ui| {
                 let layouts = vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical];
                 for l in layouts {
-                    ui.selectable_value(
+                    if ui.selectable_value(
                         &mut self.render_settings.render_layout,
                         l,
                         l.to_string()
-                    );
+                    ).changed() {
+                        self.render_font();
+                    };
                 }
             });
         
@@ -66,11 +117,13 @@ impl FontRasterizerApp {
             .show_ui(ui, |ui| {
                 let directions = vec![RenderDirection::LeftToRight, RenderDirection::TopToBottom];
                 for d in directions {
-                    ui.selectable_value(
+                    if ui.selectable_value(
                         &mut self.render_settings.render_direction,
                         d,
                         d.to_string()
-                    );
+                    ).changed() {
+                        self.render_font();
+                    };
                 }
             });
         
@@ -88,7 +141,7 @@ impl FontRasterizerApp {
             .show_ui(ui, |ui| {
                 let properties = vec![None, Some(RasterizationProperty::Brightness), Some(RasterizationProperty::Width), Some(RasterizationProperty::Height)];
                 for p in properties {
-                    ui.selectable_value(
+                    if ui.selectable_value(
                         &mut self.render_settings.sort_property,
                         p,
                         format!("{}", {
@@ -98,7 +151,9 @@ impl FontRasterizerApp {
                                 "None".into()
                             }
                         })
-                    );
+                    ).changed() {
+                        self.render_font();
+                    };
                 }
             });
         
@@ -116,7 +171,7 @@ impl FontRasterizerApp {
             .show_ui(ui, |ui| {
                 let properties = vec![None, Some(RasterizationProperty::Brightness), Some(RasterizationProperty::Width), Some(RasterizationProperty::Height)];
                 for p in properties {
-                    ui.selectable_value(
+                    if ui.selectable_value(
                         &mut self.render_settings.dedup_property,
                         p,
                         format!("{}", {
@@ -126,7 +181,9 @@ impl FontRasterizerApp {
                                 "None".into()
                             }
                         })
-                    );
+                    ).changed() {
+                        self.render_font();
+                    };
                 }
             });
     }
@@ -147,10 +204,12 @@ impl eframe::App for FontRasterizerApp {
                 // Export History
             });
         }
+
+        egui::TopBottomPanel::top("top-panel").show(ctx, |ui| {
+            self.header(ui);
+        });
         
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.center_head(ui);
-            ui.separator();
             if let Some(img) = &self.render {
                 let render_img = ui.ctx().load_texture(
                     "render", 
@@ -158,29 +217,29 @@ impl eframe::App for FontRasterizerApp {
                     TextureOptions::NEAREST
                 );
                 
-                // ui.add(ImageButton::new(Image::new(&render_img)));
                 ui.centered_and_justified(|ui| {
                     ui.add(
-                        Image::from_texture(
-                            SizedTexture::from_handle(&render_img))
+                        Image::from_texture(SizedTexture::from_handle(&render_img))
+                        .fit_to_exact_size(ui.available_size())
                     );
                 });
-                // ui.image(Image::new(&render_img));
             }
         });
 
         
 
-        if let Some(font_face) = self.font_face.as_ref() {
-            if !self.rendered {
-                self.rendered = true;
-                let rasterizations = font_face.rasterize(None, self.render_settings.render_height);
-                self.render = Some(render_image(
-                    rasterizations,
-                    &self.render_settings
-                ));
-            }
-        }
+        
+
+        // if let Some(font_face) = self.font_face.as_ref() {
+        //     if !self.rendered {
+        //         self.rendered = true;
+        //         let rasterizations = font_face.rasterize(None, self.render_settings.render_height);
+        //         self.render = Some(render_image(
+        //             rasterizations,
+        //             &self.render_settings
+        //         ));
+        //     }
+        // }
 
 
         

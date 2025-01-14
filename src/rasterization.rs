@@ -1,5 +1,5 @@
 use fontdue::{Font, Metrics};
-use std::{collections::HashMap, fmt::Display, fs::File, io::Read, path::PathBuf};
+use std::{collections::{HashMap, HashSet}, fmt::Display, fs::File, io::Read, path::PathBuf};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum RasterizationProperty {
@@ -76,21 +76,38 @@ impl RasterManip for Rasterizations {
     }
 
     fn sort_rasters_by(&mut self, property: RasterizationProperty) {
-        match property {
-            RasterizationProperty::Brightness => {
-                self.sort_by(|a, b| a.get_brightness().cmp(&b.get_brightness()));
-            }
-            _ => {}
-        }
+        self.sort_by(|a, b| a.get_property(property).cmp(&b.get_property(property)));
+        // match property {
+        //     RasterizationProperty::Brightness => {
+        //         self.sort_by(|a, b| a.get_brightness().cmp(&b.get_brightness()));
+        //     }
+        //     _ => {}
+        // }
     }
     fn dedup_rasters_by(&mut self, property: RasterizationProperty) {
-        match property {
-            RasterizationProperty::Brightness => {
-                self.dedup_by(|a, b| a.get_brightness() == b.get_brightness())
-            }
-            RasterizationProperty::Width => self.dedup_by(|a, b| a.get_width() == b.get_width()),
-            RasterizationProperty::Height => self.dedup_by(|a, b| a.get_height() == b.get_height()),
-        }
+
+        let mut set = HashSet::new();
+        self.retain(|r| set.insert(r.get_property(property)));
+        // let mut set = HashSet::new();
+        // let mut indices = vec![];
+        // for (i, r) in self.iter().enumerate() {
+        //     if !set.insert(r.get_property(property)) {
+        //         indices.push(i);
+        //     }
+        // }
+        // for (pos, e) in indices.iter().enumerate() {
+        //     self.remove(*e - pos);
+        // }
+
+        // self.dedup_by(|a, b| a.get_property(property) == b.get_property(property));
+
+        // match property {
+        //     RasterizationProperty::Brightness => {
+        //         self.dedup_by(|a, b| a.get_brightness() == b.get_brightness());
+        //     }
+        //     RasterizationProperty::Width => self.dedup_by(|a, b| a.get_width() == b.get_width()),
+        //     RasterizationProperty::Height => self.dedup_by(|a, b| a.get_height() == b.get_height()),
+        // }
     }
 }
 
