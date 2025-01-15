@@ -55,7 +55,7 @@ Then running the project is as simple running "cargo run" in the project folder.
 ```
 
 ## Inspiration
-The whole reason I was inspired to develop this tool was Acerola's [font art video](https://www.youtube.com/watch?v=gg40RWiaHRY&t=719s), I wanted to recreate the effect shown in his video but could not find any adequate font texture atlas so I decided to make my own.
+The whole reason I was inspired to develop this tool was Acerola's [font art video](https://www.youtube.com/watch?v=gg40RWiaHRY&t=719s), I wanted to recreate the effect shown in his video but could not find any adequate font atlas texture so I decided to make my own by creating this tool.
 
 
 
