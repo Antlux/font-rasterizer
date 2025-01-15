@@ -147,7 +147,6 @@ pub fn generate_render_data(
             let mut map = HashMap::new();
             for i in 2..=(rasterizations.len() / 2) {
                 let remainder = rasterizations.len() % i;
-                // let d = rasterizations.len() / i;
                 let v = (i - remainder) % i;
 
                 map.insert(i, v);
@@ -225,10 +224,7 @@ pub fn generate_render_data(
             // Pixel coordinate within cell.
             let cell_relative_x = raster_relative_x as isize + center_offset_x;
             let cell_relative_y = raster_relative_y as isize + center_offset_y;
-            // let center_offset_y = (cell_height - metrics.height) as isize;
 
-            // let inverted_ymin =
-            //     cell_height as isize - (metrics.height as isize + metrics.ymin as isize);
             let inverted_ymin = 0;
 
             // Absolute pixel coordinate within texture atlas.
@@ -240,10 +236,6 @@ pub fn generate_render_data(
                 + cell_relative_y
                 + inverted_ymin)
                 .max(0) as usize;
-            // let x = (x as i32 + metrics.xmin) as usize + ((cell_width - metrics.width) / 2);
-            // let y = (y as i32 + invert_ymin(metrics.ymin, pixel_height as usize, metrics.height))
-            //     as usize
-            //     + ((cell_height - metrics.height) / 2);
 
             // Absolute pixel coordinate as index in pixel buffer.
             let index = x + (y * cell_h_count * cell_width);
@@ -265,31 +257,8 @@ pub fn generate_render_data(
             cell_filled: rasterizations.len().min(cell_h_count * cell_v_count)
         }
     )
-    // (texture_width, texture_height, pixels)
 }
 
-
-// pub fn render_image(
-//     mut rasterizations: Rasterizations,
-//     render_settings: &RenderSettings
-// ) -> Result<ColorImage, RendererError>  {
-
-//     if let Some(p) = render_settings.sort_property {
-//         rasterizations.sort_rasters_by(p);
-//     }
-
-//     if let Some(p) = render_settings.dedup_property {
-//         rasterizations.dedup_rasters_by(p);
-//     }
-
-//     let (render_data, _render_info) = generate_render_data(rasterizations, render_settings);
-
-//     if render_data.width.max(render_data.height) <= 16384 {
-//         Ok(ColorImage::from_gray([render_data.width, render_data.height], &render_data.pixels))
-//     } else {
-//         Err(RendererError::TooLarge)
-//     }
-// }
 
 
 pub fn write_image(name: String, render_data: &RenderData) -> Result<(), RendererError> {
@@ -306,8 +275,6 @@ pub fn write_image(name: String, render_data: &RenderData) -> Result<(), Rendere
         .ok_or(RendererError::InvalidPath)?;
 
     println!("{}", render_path.to_str().unwrap());
-    
-    // render_path.push(!("{}.png"));
 
     println!("Trying to create file at {}", render_path.display());
 

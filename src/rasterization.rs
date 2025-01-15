@@ -69,47 +69,17 @@ impl RasterManip for Rasterizations {
                 counter.insert(value, 1);
             }
         }
-        // println!("Duplicates by value for {}:", property);
-        // for (v, c) in counter.iter() {
-        //     println!("{} : {}", v, c);
-        // }
         counter.values().into_iter().map(|e| e - 1).sum::<usize>()
     }
 
     fn sort_rasters_by(&mut self, property: RasterizationProperty) {
         self.sort_by(|a, b| a.get_property(property).cmp(&b.get_property(property)));
-        // match property {
-        //     RasterizationProperty::Brightness => {
-        //         self.sort_by(|a, b| a.get_brightness().cmp(&b.get_brightness()));
-        //     }
-        //     _ => {}
-        // }
     }
     
     fn dedup_rasters_by(&mut self, property: RasterizationProperty) {
 
         let mut set = HashSet::new();
         self.retain(|r| set.insert(r.get_property(property)));
-        // let mut set = HashSet::new();
-        // let mut indices = vec![];
-        // for (i, r) in self.iter().enumerate() {
-        //     if !set.insert(r.get_property(property)) {
-        //         indices.push(i);
-        //     }
-        // }
-        // for (pos, e) in indices.iter().enumerate() {
-        //     self.remove(*e - pos);
-        // }
-
-        // self.dedup_by(|a, b| a.get_property(property) == b.get_property(property));
-
-        // match property {
-        //     RasterizationProperty::Brightness => {
-        //         self.dedup_by(|a, b| a.get_brightness() == b.get_brightness());
-        //     }
-        //     RasterizationProperty::Width => self.dedup_by(|a, b| a.get_width() == b.get_width()),
-        //     RasterizationProperty::Height => self.dedup_by(|a, b| a.get_height() == b.get_height()),
-        // }
     }
 
     fn dedup_exact_duplicate(&mut self) {

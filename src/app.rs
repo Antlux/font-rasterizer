@@ -298,25 +298,7 @@ impl eframe::App for FontRasterizerApp {
                     );
                 });
             }
-        });
-
-        
-
-        
-
-        // if let Some(font_face) = self.font_face.as_ref() {
-        //     if !self.rendered {
-        //         self.rendered = true;
-        //         let rasterizations = font_face.rasterize(None, self.render_settings.render_height);
-        //         self.render = Some(render_image(
-        //             rasterizations,
-        //             &self.render_settings
-        //         ));
-        //     }
-        // }
-
-
-        
+        });        
     }
 }
 
@@ -358,14 +340,3 @@ pub fn get_font_face() -> Result<FontFace, AppError> {
         .ok_or(AppError::NoFontPath)?;
     FontFace::load(font_path).map_err(|err| AppError::FontLoadingError(err))
 }
-
-// pub fn get_input<T>() -> Result<T, <T as FromStr>::Err>
-// where
-//     T: ToString + FromStr,
-//     <T as FromStr>::Err: Debug,
-// {
-//     let mut input_buf = String::new();
-//     let _ = stdin().read_line(&mut input_buf);
-//     input_buf.trim().split(' ').next().unwrap().parse::<T>()
-// }
-
