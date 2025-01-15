@@ -143,7 +143,7 @@ impl FontRasterizerApp {
             });
 
             self.render_settings.render_layout = RenderLayout::Custom(h, v);
-            
+
             if h_b || v_b {
                 self.render_font();
             }
@@ -260,7 +260,26 @@ impl eframe::App for FontRasterizerApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                ui.label("test");
+                let (cell_width, cell_height) = self.render_info.cell_size;
+                let (cell_h_count, cell_v_count) = self.render_info.cell_count;
+                let texture_width = cell_width * cell_h_count;
+                let texture_height = cell_height * cell_v_count;
+                let cell_filled = self.render_info.cell_filled;
+                let cell_count = cell_h_count * cell_v_count;
+                let empty_cells = cell_count - cell_filled;
+                let info_text = format!(
+                    "{} characters rendered | Cell size: {}x{} pixels | Cell count: {}x{} ({}) | Empty cells: {} | Texture size: {}x{} pixels", 
+                    cell_filled, 
+                    cell_width, 
+                    cell_height, 
+                    cell_h_count, 
+                    cell_v_count, 
+                    cell_count,
+                    empty_cells,
+                    texture_width,
+                    texture_height
+                );
+                ui.label(info_text)
             });
 
             ui.separator();

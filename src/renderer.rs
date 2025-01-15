@@ -110,7 +110,8 @@ impl From<RenderData> for ColorImage {
 #[derive(Default, Clone)]
 pub struct RenderInfo {
     pub cell_size: (usize, usize),
-    pub cell_count: (usize, usize)
+    pub cell_count: (usize, usize),
+    pub cell_filled: usize
 }
 
 
@@ -260,7 +261,8 @@ pub fn generate_render_data(
         },
         RenderInfo {
             cell_size: (cell_width, cell_height),
-            cell_count: (cell_h_count, cell_v_count)
+            cell_count: (cell_h_count, cell_v_count),
+            cell_filled: rasterizations.len().min(cell_h_count * cell_v_count)
         }
     )
     // (texture_width, texture_height, pixels)
