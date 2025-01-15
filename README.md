@@ -1,15 +1,25 @@
 # Font Rasterizer
-Font Rasterizer is a tool made with the purpose of generating font atlas textures.
+Font Rasterizer is a tool made with the purpose of generating and rendering font atlas textures. Though Font Rasterizer was primarily intended for pixel perfect fonts, there is no reason why it cannot render any other font that comes in the supported formats (ttf, ttc, otf).
 
 ## Examples & Usage
-Here are a few examples of atlases made using font rasterizer:
+Here are a few examples of atlas textures made using font rasterizer:
 
-![LanaPixel-(w20-h13)](https://github.com/user-attachments/assets/93e68045-1b43-4b95-a8dc-7ed77d3138d2)
-![PixelCode-Medium-(w14-h16)](https://github.com/user-attachments/assets/7f2ce19f-0b2f-4e59-827c-99e190b083eb)
+### Example renders:
 
-And here is an example of what you can do with those textures:
+#### [Unifont](http://czyborra.com/unifont/updates/unifont.ttf)
+![unifont-(16w-16h)-(228H-228V)](https://github.com/user-attachments/assets/34fd3007-cefe-4d00-84f0-427498902604)
+
+#### [LanaPixel](https://opengameart.org/content/lanapixel-localization-friendly-pixel-font)
+![LanaPixel-(20w-13h)-(53H-18V)](https://github.com/user-attachments/assets/2495817d-2ae0-40d1-8c95-22a6d8b9fa24)
+
+#### [PixelOperator](https://www.dafont.com/pixel-operator.font)
+![PixelOperator8-(11w-8h)-(17H-12V)](https://github.com/user-attachments/assets/d39bff3b-a620-4ecf-a637-c7a6b3fe3d67)
+
+### Example of use:
 
 ![font-orb](https://github.com/user-attachments/assets/02675c08-e06a-4f6e-8f53-e41d3a0a2b95)
+
+A study made in [Material Maker](https://www.materialmaker.org/)
 
 
 
@@ -36,8 +46,7 @@ The whole reason I was inspired to develop this tool was Acerola's [font art vid
 ### Some of the fonts I used:
 - [LanaPixel](https://opengameart.org/content/lanapixel-localization-friendly-pixel-font)
 - [Unifont](http://czyborra.com/unifont/updates/unifont.ttf)
-- [PixelOperator](https://www.dafont.com/pixel-operator.font)
-- [PixelCode](https://qwerasd205.github.io/PixelCode/)
+- 
 
 
 
