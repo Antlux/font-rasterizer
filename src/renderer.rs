@@ -1,4 +1,4 @@
-use std::{fmt::Display, fs::File, io::BufWriter};
+use std::{collections::HashMap, fmt::Display, fs::File, io::BufWriter};
 
 use eframe::egui::ColorImage;
 
@@ -40,7 +40,7 @@ impl Default for RenderSettings {
             render_direction: RenderDirection::LeftToRight,
             sort_property: Some(RasterizationProperty::Brightness),
             dedup_property: Some(RasterizationProperty::Brightness),
-            dedup_exact_duplicate: false
+            dedup_exact_duplicate: true
         }
     }
 }
@@ -50,6 +50,7 @@ pub enum RenderLayout {
     Squarish,
     Horizontal,
     Vertical,
+    Packed(bool),
     Custom(usize, usize)
 }
 
@@ -59,6 +60,13 @@ impl Display for RenderLayout {
             Self::Squarish => write!(f, "Squarish"),
             Self::Horizontal => write!(f, "Horizontal"),
             Self::Vertical => write!(f, "Vertical"),
+            Self::Packed(flipped) => {
+                if flipped.to_owned() {
+                    write!(f, "Packed (flipped)")
+                } else {
+                    write!(f, "Packed")
+                }
+            },
             Self::Custom(h, v) => write!(f, "Custom ({h} {v})")
         }
     }
@@ -134,17 +142,61 @@ pub fn generate_render_data(
             let h_count = (target_width / (cell_width as f32)).round() as usize;
             (h_count, (rasterizations.len() as f32 / h_count as f32).ceil() as usize)
         }
+        RenderLayout::Packed(flipped) => {
+            let mut map = HashMap::new();
+            for i in 2..=(rasterizations.len() / 2) {
+                let remainder = rasterizations.len() % i;
+                // let d = rasterizations.len() / i;
+                let v = (i - remainder) % i;
+
+                map.insert(i, v);
+            }
+            
+            let mut t = map
+            .into_iter()
+            .collect::<Vec<_>>();
+            
+            t.sort_by(|(_, a), (_, b)| b.cmp(a));
+
+            let (_, rl) = t.last().unwrap().to_owned();
+
+            t.retain(|(_, r)| r.to_owned() == rl.to_owned());
+
+            t.sort_by(|(a, _), (b, _)| b.cmp(a));
+
+            let mut h = rasterizations.len();
+            let mut distance = rasterizations.len();
+            let total_pixels = cell_width * cell_height * rasterizations.len();
+            let target_width = ((total_pixels as f32).sqrt() / (cell_width as f32)).round() as usize;
+            for (d, _) in t {
+                let dist = (target_width).abs_diff(d);
+                if dist < distance {
+                    h = d;
+                    distance = dist;
+                }
+            }
+
+
+            let v = (rasterizations.len() as f32 / (h as f32)).ceil() as usize;
+
+            if !flipped {
+                (h, v)
+            } else {
+                (v, h)
+            }
+
+        }
         RenderLayout::Custom(h, v) => (h, v)
     };
 
     // Whole texture size in pixels.
-    let width = cell_width * cell_h_count;
-    let height = cell_height * cell_v_count;
+    let texture_width = cell_width * cell_h_count;
+    let texture_height = cell_height * cell_v_count;
 
     // Pixel buffer.
-    let mut pixels = vec![0u8; width * height];
+    let mut pixels = vec![0u8; texture_width * texture_height];
 
-    for (i, (metrics, rasterization)) in rasterizations.iter().enumerate() {
+    for (i, (metrics, rasterization)) in rasterizations.iter().take(cell_h_count * cell_v_count).enumerate() {
 
         // Cell coordinates.
         let (cell_x, cell_y) = match render_settings.render_direction {
@@ -165,7 +217,6 @@ pub fn generate_render_data(
         let center_offset_y = ((cell_height as isize) - (metrics.height as isize)) / 2;
 
         for (i, value) in rasterization.iter().enumerate() {
-            
             // Pixel coordinate within character rasterization.
             let raster_relative_x = i % metrics.width;
             let raster_relative_y = (i - raster_relative_x) / metrics.width;
@@ -203,12 +254,12 @@ pub fn generate_render_data(
 
     (
         RenderData {
-            width,
-            height,
+            width: texture_width,
+            height: texture_height,
             pixels
         },
         RenderInfo {
-            cell_size: (cell_width, cell_width),
+            cell_size: (cell_width, cell_height),
             cell_count: (cell_h_count, cell_v_count)
         }
     )

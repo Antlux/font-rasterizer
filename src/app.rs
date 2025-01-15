@@ -109,9 +109,11 @@ impl FontRasterizerApp {
             .selected_text(format!("{}", self.render_settings.render_layout.to_string()))
             .show_ui(ui, |ui| {
                 let layouts = if let RenderLayout::Custom(h, v) = self.render_settings.render_layout {
-                    vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical, RenderLayout::Custom(h, v)]
+                    vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical, RenderLayout::Packed(false), RenderLayout::Custom(h, v)]
+                } else if let RenderLayout::Packed(flipped) = self.render_settings.render_layout {
+                    vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical, RenderLayout::Packed(flipped), RenderLayout::Custom(10, 10)]
                 } else {
-                    vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical, RenderLayout::Custom(10, 10)]
+                    vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical, RenderLayout::Packed(false), RenderLayout::Custom(10, 10)]
                 };
 
                 for l in layouts {
@@ -126,22 +128,31 @@ impl FontRasterizerApp {
             });
         
         if let RenderLayout::Custom(mut h, mut v) = self.render_settings.render_layout {
-            // let (mut h, mut v) = (h, v);
+            let mut h_b = false;
+            let mut v_b = false;
             ui.horizontal(|ui| {
                 ui.label("Width");
                 let resp = ui.add(DragValue::new(&mut h).range(1..=1000).speed(1.0));
-                if resp.drag_stopped() || resp.lost_focus() {
-                    self.render_font();
-                }
+                h_b = resp.drag_stopped() || resp.lost_focus();
+                
             });
             ui.horizontal(|ui| {
                 ui.label("Height");
                 let resp = ui.add(DragValue::new(&mut v).range(1..=1000).speed(1.0));
-                if resp.drag_stopped() || resp.lost_focus() {
-                    self.render_font();
-                }
+                v_b = resp.drag_stopped() || resp.lost_focus();
             });
+
             self.render_settings.render_layout = RenderLayout::Custom(h, v);
+            
+            if h_b || v_b {
+                self.render_font();
+            }
+        } 
+        if let RenderLayout::Packed(mut flipped) = self.render_settings.render_layout {
+            if ui.checkbox(&mut flipped, "Flipped").changed() {
+                self.render_settings.render_layout = RenderLayout::Packed(flipped);
+                self.render_font();
+            }
         }
 
         // Render Direction
@@ -248,6 +259,12 @@ impl eframe::App for FontRasterizerApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            egui::menu::bar(ui, |ui| {
+                ui.label("test");
+            });
+
+            ui.separator();
+
             if let Some(img) = &self.render {
                 let render_img = ui.ctx().load_texture(
                     "render", 
