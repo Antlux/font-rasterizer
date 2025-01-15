@@ -54,14 +54,8 @@ Then running the project is as simple running "cargo run" in the project folder.
   cargo run
 ```
 
-## Useful resources & Inspiration
+## Inspiration
 The whole reason I was inspired to develop this tool was Acerola's [font art video](https://www.youtube.com/watch?v=gg40RWiaHRY&t=719s), I wanted to recreate the effect shown in his video but could not find any adequate font texture atlas so I decided to make my own.
-
-### Some of the fonts I used:
-- [LanaPixel](https://opengameart.org/content/lanapixel-localization-friendly-pixel-font)
-- [Unifont](http://czyborra.com/unifont/updates/unifont.ttf)
-- 
-
 
 
 
