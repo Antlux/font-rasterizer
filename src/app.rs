@@ -5,8 +5,7 @@ use std::
 use eframe::egui::{self, load::SizedTexture, ColorImage, ComboBox, DragValue, Image, ImageData, TextureOptions, Ui};
 
 use crate::{
-    rasterization::{FontFace, FontFaceError, RasterManip, RasterizationProperty},
-    renderer::{generate_render_data, write_image, RenderData, RenderDirection, RenderInfo, RenderLayout, RenderSettings, RendererError},
+    font_face::{FontFace, FontFaceError}, rasterization::{RasterManip, RasterizationProperty}, renderer::{generate_render_data, write_image, RenderData, RenderDirection, RenderInfo, RenderLayout, RenderSettings, RendererError}
 };
 
 
