@@ -1,5 +1,5 @@
 # Font Rasterizer
-Font Rasterizer is a CLI tool made with the purpose of generating font atlas textures.
+Font Rasterizer is a tool made with the purpose of generating font atlas textures.
 
 ## Examples & Usage
 Here are a few examples of atlases made using font rasterizer:
@@ -29,46 +29,6 @@ Then running the project is as simple running "cargo run" in the project folder.
 ```bash
   cargo run
 ```
-
-## Generating font atlas textures
-
-![demo](https://github.com/user-attachments/assets/1fe692c9-1d8f-4e4a-a5b2-e5ab936c0312)
-
-### Generation Steps:
-#### <ins>Choose a font to render.</ins>
-When the program starts you will be prompted to choose a font file (otf, ttf or ttc) as a file selector dialog window opens.
-
-#### <ins>Choose rendering height of characters (in pixels, can be decimal).</ins>
-This value will determine the space allocated to a character "cell" in the texture atlas, it is really important to have this correct for pixel perfect fonts to render correctly.
-
-#### <ins>Choose a rendering layout.</ins>
-Whether the atlas is layed out in a squarish shape atlas or as horizontal/vertical atlas. The "Squarish" shape allows for larger renders.
-- Squarish
-- Horizontal
-- Vertical
-
-#### <ins>Choose a property to sort the character rasterizations by.</ins>
-As of now the program only exposes 3 character rasterization properties, but you can also choose not to sort:
-- None
-- Brightness (a sum of all character pixel values)
-- Width (of rasterization pixel grid)
-- Height (idem)
-
-#### <ins>Choose to remove duplicate character rasterizations by property.</ins>
-Once again the program only exposes 3 character rasterization properties, and you can also choose not to remove any duplicate rasterization:
-- None
-- Brightness (a sum of all character pixel values)
-- Width (of rasterization pixel grid)
-- Height (idem)
-
-At this point the program tells you how many duplicates exist by property.
-
-#### <ins>Choose the character rendering direction</ins>
-This determines if the characters are layed out left-to-right or top-to-bottom:
-- Left to Right
-- Top to Bottom
-
-#### <ins>Choose the texture atlas target directory</ins>
 
 ## Useful resources & Inspiration
 The whole reason I was inspired to develop this tool was Acerola's [font art video](https://www.youtube.com/watch?v=gg40RWiaHRY&t=719s), I wanted to recreate the effect shown in his video but could not find any adequate font texture atlas so I decided to make my own.
