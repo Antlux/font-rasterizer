@@ -50,6 +50,7 @@ pub enum RenderLayout {
     Squarish,
     Horizontal,
     Vertical,
+    Custom(usize, usize)
 }
 
 impl Display for RenderLayout {
@@ -58,6 +59,7 @@ impl Display for RenderLayout {
             Self::Squarish => write!(f, "Squarish"),
             Self::Horizontal => write!(f, "Horizontal"),
             Self::Vertical => write!(f, "Vertical"),
+            Self::Custom(h, v) => write!(f, "Custom ({h} {v})")
         }
     }
 }
@@ -132,6 +134,7 @@ pub fn generate_render_data(
             let h_count = (target_width / (cell_width as f32)).round() as usize;
             (h_count, (rasterizations.len() as f32 / h_count as f32).ceil() as usize)
         }
+        RenderLayout::Custom(h, v) => (h, v)
     };
 
     // Whole texture size in pixels.

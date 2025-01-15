@@ -108,7 +108,12 @@ impl FontRasterizerApp {
         ComboBox::from_label("Render Layout")
             .selected_text(format!("{}", self.render_settings.render_layout.to_string()))
             .show_ui(ui, |ui| {
-                let layouts = vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical];
+                let layouts = if let RenderLayout::Custom(h, v) = self.render_settings.render_layout {
+                    vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical, RenderLayout::Custom(h, v)]
+                } else {
+                    vec![RenderLayout::Squarish, RenderLayout::Horizontal, RenderLayout::Vertical, RenderLayout::Custom(10, 10)]
+                };
+
                 for l in layouts {
                     if ui.selectable_value(
                         &mut self.render_settings.render_layout,
@@ -120,6 +125,25 @@ impl FontRasterizerApp {
                 }
             });
         
+        if let RenderLayout::Custom(mut h, mut v) = self.render_settings.render_layout {
+            // let (mut h, mut v) = (h, v);
+            ui.horizontal(|ui| {
+                ui.label("Width");
+                let resp = ui.add(DragValue::new(&mut h).range(1..=1000).speed(1.0));
+                if resp.drag_stopped() || resp.lost_focus() {
+                    self.render_font();
+                }
+            });
+            ui.horizontal(|ui| {
+                ui.label("Height");
+                let resp = ui.add(DragValue::new(&mut v).range(1..=1000).speed(1.0));
+                if resp.drag_stopped() || resp.lost_focus() {
+                    self.render_font();
+                }
+            });
+            self.render_settings.render_layout = RenderLayout::Custom(h, v);
+        }
+
         // Render Direction
         ComboBox::from_label("Render Direction")
             .selected_text(format!("{}", self.render_settings.render_direction.to_string()))
