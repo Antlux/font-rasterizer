@@ -271,11 +271,7 @@ pub fn generate_render_data(
             // Absolute pixel coordinate as index in pixel buffer.
             let index = x + (y * cell_h_count * cell_width);
             if let Some(pixel) = pixels.get_mut(index) {
-                if value == &u8::MIN {
-                    *pixel = 32u8
-                } else {
-                    *pixel = *value;
-                }
+                *pixel = *value;
             } 
         }
 
