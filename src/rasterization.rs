@@ -1,5 +1,5 @@
-use fontdue::{Font, Metrics};
-use std::{collections::{HashMap, HashSet}, fmt::Display, fs::File, io::Read, path::PathBuf};
+use fontdue::Metrics;
+use std::{collections::{HashMap, HashSet}, fmt::Display};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum RasterizationProperty {
@@ -18,16 +18,19 @@ impl Display for RasterizationProperty {
     }
 }
 
-
-pub type CharRaster = (Metrics, Vec<u8>);
-pub trait RasterInfo {
-    fn get_property(&self, property: RasterizationProperty) -> usize;
-    fn get_brightness(&self) -> usize;
-    fn get_width(&self) -> usize;
-    fn get_height(&self) -> usize;
+pub struct CharRaster {
+    metrics: Metrics,
+    pixels: Vec<u8>,
 }
 
-impl RasterInfo for CharRaster {
+impl CharRaster {
+    pub fn new((metrics, pixels): (Metrics, Vec<u8>)) -> Self {
+        Self {
+            metrics,
+            pixels
+        }
+    }
+
     fn get_property(&self, property: RasterizationProperty) -> usize {
         match property {
             RasterizationProperty::Brightness => self.get_brightness(),
@@ -36,17 +39,24 @@ impl RasterInfo for CharRaster {
         }
     }
 
-    fn get_brightness(&self) -> usize {
-        let (_, data) = &self;
-        data.into_iter().map(|v| v.to_owned() as usize).sum()
+    pub fn get_metrics(&self) -> Metrics {
+        self.metrics
     }
-    fn get_width(&self) -> usize {
-        let (m, _) = self;
-        m.height
+
+    pub fn get_pixels(&self) -> Vec<u8> {
+        self.pixels.clone()
     }
-    fn get_height(&self) -> usize {
-        let (m, _) = self;
-        m.height
+
+    pub fn get_brightness(&self) -> usize {
+        self.pixels.iter().map(|v| *v as usize).sum()
+    }
+    
+    pub fn get_width(&self) -> usize {
+        self.metrics.width
+    }
+    
+    pub fn get_height(&self) -> usize {
+        self.metrics.height
     }
 }
 
@@ -84,63 +94,8 @@ impl RasterManip for Rasterizations {
 
     fn dedup_exact_duplicate(&mut self) {
         let mut set = HashSet::new();
-        self.retain(|(_, p)| set.insert(p.clone()));
+        self.retain(|cr| set.insert(cr.pixels.clone()));
     }
 }
 
-#[derive(Debug)]
-pub enum FontFaceError {
-    FontOpeningError,
-    CreationError(&'static str),
-}
 
-impl Display for FontFaceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::FontOpeningError => write!(f, "Encountered error opening font file."),
-            Self::CreationError(err) => write!(f, "Encountered error creating font face: {err}"),
-        }
-    }
-}
-
-pub struct FontFace {
-    font: Font,
-    path: PathBuf,
-}
-
-impl FontFace {
-    pub fn load(font_path: PathBuf) -> Result<Self, FontFaceError> {
-        let mut buf = vec![];
-        let mut file = File::open(&font_path).map_err(|_| FontFaceError::FontOpeningError)?;
-        let _ = file.read_to_end(&mut buf);
-
-        Ok(Self {
-            font: {
-                Font::from_bytes(buf, fontdue::FontSettings::default())
-                    .map_err(|err| FontFaceError::CreationError(err))?
-            },
-            path: font_path,
-        })
-    }
-
-    pub fn stem(&self) -> &str {
-        self.path.file_stem().unwrap().to_str().unwrap().into()
-    }
-
-    pub fn path(&self) -> &str {
-        self.path.to_str().unwrap()
-    }
-
-    pub fn chars(&self) -> Vec<char> {
-        self.font.chars().keys().map(|c| *c).collect::<Vec<_>>()
-    }
-
-    pub fn rasterize(&self, input: Option<Vec<char>>, pixel_height: f32) -> Rasterizations {
-        let chars = input.unwrap_or(self.chars());
-
-        chars
-            .iter()
-            .map(|c| self.font.rasterize(*c, pixel_height))
-            .collect::<Vec<_>>() as Rasterizations
-    }
-}

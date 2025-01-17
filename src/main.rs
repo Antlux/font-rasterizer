@@ -1,8 +1,5 @@
 use eframe::{run_native, Result, NativeOptions};
-use rasterizer::
-    app::FontRasterizerApp
-;
-
+use font_rasterizer::app::FontRasterizerApp;
 
 fn main() -> Result {
     let native_options = NativeOptions::default();
@@ -15,3 +12,4 @@ fn main() -> Result {
         })
     )
 }
+

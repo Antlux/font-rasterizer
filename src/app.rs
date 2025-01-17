@@ -2,7 +2,7 @@ use std::
     fmt::Display
 ;
 
-use eframe::egui::{self, load::SizedTexture, ColorImage, ComboBox, DragValue, Image, ImageData, TextureOptions, Ui};
+use eframe::egui::{self, load::SizedTexture, ColorImage, ComboBox, DragValue, Image, ImageData, ScrollArea, TextureOptions, Ui};
 
 use crate::{
     font_face::{FontFace, FontFaceError}, rasterization::{RasterManip, RasterizationProperty}, renderer::{generate_render_data, write_image, RenderData, RenderDirection, RenderInfo, RenderLayout, RenderSettings, RendererError}
@@ -30,7 +30,11 @@ impl FontRasterizerApp {
     fn render_font(&mut self) {
         if let Some(font_face) = &self.font_face {
             
-            let mut rasterizations = font_face.rasterize(None, self.render_settings.render_height);
+            let (
+                h_line_metrics, 
+                v_line_metrics, 
+                mut rasterizations
+            ) = font_face.rasterize(self.render_settings.input.clone(), self.render_settings.render_height);
 
             if let Some(p) = self.render_settings.dedup_property {
                 rasterizations.dedup_rasters_by(p);
@@ -42,7 +46,12 @@ impl FontRasterizerApp {
                 rasterizations.sort_rasters_by(p);
             } 
 
-            let (render_data, render_info) = generate_render_data(rasterizations, &self.render_settings);
+            let (render_data, render_info) = generate_render_data(
+                h_line_metrics,
+                v_line_metrics,
+                rasterizations, 
+                &self.render_settings
+            );
 
             if render_data.renderable() {
                 self.render_data = render_data.clone();
@@ -95,11 +104,33 @@ impl FontRasterizerApp {
     fn settings_body(&mut self, ui: &mut Ui) {
 
         ui.horizontal(|ui| {
+            let mut has_input = self.render_settings.input.is_some();
+
+            if ui.checkbox(&mut has_input, "Input").changed() {
+                self.render_settings.input = if has_input {
+                    Some("".into())
+                } else {
+                    None
+                };
+                self.render_font();
+            }
+
+            if let Some(input) = self.render_settings.input.as_mut() {
+                if ui.text_edit_singleline(input).changed() {
+                    self.render_font();
+                };
+            }
+        });
+
+        ui.horizontal(|ui| {
             ui.label("Render Height");
-            let resp = ui.add(DragValue::new(&mut self.render_settings.render_height).range(1..=100).speed(0.1));
+            let resp = ui.add(DragValue::new(&mut self.render_settings.render_height).range(1..=1000).speed(0.1));
             if resp.drag_stopped() || resp.lost_focus() {
                 self.render_font();
             }
+            // if resp.changed() {
+            //     self.render_font();
+            // }
         });
         // Render Height
 
@@ -259,26 +290,28 @@ impl eframe::App for FontRasterizerApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                let (cell_width, cell_height) = self.render_info.cell_size;
-                let (cell_h_count, cell_v_count) = self.render_info.cell_count;
-                let texture_width = cell_width * cell_h_count;
-                let texture_height = cell_height * cell_v_count;
-                let cell_filled = self.render_info.cell_filled;
-                let cell_count = cell_h_count * cell_v_count;
-                let empty_cells = cell_count - cell_filled;
-                let info_text = format!(
-                    "{} characters rendered | Cell size: {}x{} pixels | Cell count: {}x{} ({}) | Empty cells: {} | Texture size: {}x{} pixels", 
-                    cell_filled, 
-                    cell_width, 
-                    cell_height, 
-                    cell_h_count, 
-                    cell_v_count, 
-                    cell_count,
-                    empty_cells,
-                    texture_width,
-                    texture_height
-                );
-                ui.label(info_text)
+                ScrollArea::horizontal().show(ui, |ui| {
+                    let (cell_width, cell_height) = self.render_info.cell_size;
+                    let (cell_h_count, cell_v_count) = self.render_info.cell_count;
+                    let texture_width = cell_width * cell_h_count;
+                    let texture_height = cell_height * cell_v_count;
+                    let cell_filled = self.render_info.cell_filled;
+                    let cell_count = cell_h_count * cell_v_count;
+                    let empty_cells = cell_count - cell_filled;
+                    let info_text = format!(
+                        "{} characters rendered | Cell size: {}x{} pixels | Cell count: {}x{} ({}) | Empty cells: {} | Texture size: {}x{} pixels", 
+                        cell_filled, 
+                        cell_width, 
+                        cell_height, 
+                        cell_h_count, 
+                        cell_v_count, 
+                        cell_count,
+                        empty_cells,
+                        texture_width,
+                        texture_height
+                    );
+                    ui.label(info_text)
+                });
             });
 
             ui.separator();

@@ -1,8 +1,8 @@
 use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
 
-use fontdue::Font;
+use fontdue::{Font, LineMetrics};
 
-use crate::rasterization::Rasterizations;
+use crate::rasterization::{CharRaster, Rasterizations};
 
 #[derive(Debug)]
 pub enum FontFaceError {
@@ -51,12 +51,26 @@ impl FontFace {
         self.font.chars().keys().map(|c| *c).collect::<Vec<_>>()
     }
 
-    pub fn rasterize(&self, input: Option<Vec<char>>, pixel_height: f32) -> Rasterizations {
-        let chars = input.unwrap_or(self.chars());
+    pub fn rasterize(&self, input: Option<String>, pixel_height: f32) -> (Option<LineMetrics>, Option<LineMetrics>, Rasterizations) {
+        let chars = if let Some(input) = input {
+            input.chars().collect()
+        } else {
+            self.chars()
+        };
+        // let chars = input.unwrap_or(self.chars());
+        let h_line_metrics = self.font.horizontal_line_metrics(pixel_height);
+        let v_line_metrics = self.font.vertical_line_metrics(pixel_height);
 
-        chars
+        let rasters = chars
             .iter()
             .map(|c| self.font.rasterize(*c, pixel_height))
-            .collect::<Vec<_>>() as Rasterizations
+            .map(|raster| CharRaster::new(raster))
+            .collect::<Vec<_>>() as Rasterizations;
+
+        (
+            h_line_metrics,
+            v_line_metrics,
+            rasters
+        )
     }
 }

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt::Display, fs::File, io::BufWriter};
 
 use eframe::egui::ColorImage;
+use fontdue::LineMetrics;
 
 use crate::rasterization::{RasterizationProperty, Rasterizations};
 
@@ -24,6 +25,7 @@ impl Display for RendererError {
 
 #[derive(Clone)]
 pub struct RenderSettings {
+    pub input: Option<String>,
     pub render_height: f32,
     pub render_layout: RenderLayout,
     pub render_direction: RenderDirection,
@@ -35,6 +37,7 @@ pub struct RenderSettings {
 impl Default for RenderSettings {
     fn default() -> Self {
         Self {
+            input: None,
             render_height: 8.0,
             render_layout: RenderLayout::Squarish,
             render_direction: RenderDirection::LeftToRight,
@@ -52,6 +55,65 @@ pub enum RenderLayout {
     Vertical,
     Packed(bool),
     Custom(usize, usize)
+}
+
+impl RenderLayout {
+    pub fn get_cell_counts(self, cell_count: usize, cell_width: usize, cell_height: usize) -> (usize, usize) {
+        match self {
+            RenderLayout::Squarish => {
+                let total_pixels = cell_width * cell_height * cell_count;
+                let target_width = (total_pixels as f32).sqrt().ceil();
+                let h_count = (target_width / (cell_width as f32)).round();
+                let v_count = (cell_count as f32 / h_count).ceil();
+                (h_count as usize, v_count as usize)
+            },
+            RenderLayout::Horizontal => (cell_count, 1usize),
+            RenderLayout::Vertical => (1usize, cell_count),
+            RenderLayout::Packed(flipped) => {
+                let mut map = HashMap::new();
+                for i in 2..=(cell_count / 2) {
+                    let remainder = cell_count % i;
+                    let v = (i - remainder) % i;
+    
+                    map.insert(i, v);
+                }
+                
+                let mut t = map
+                .into_iter()
+                .collect::<Vec<_>>();
+                
+                t.sort_by(|(_, a), (_, b)| b.cmp(a));
+    
+                let (_, rl) = t.last().unwrap_or(&(0, 0)).to_owned();
+    
+                t.retain(|(_, r)| r.to_owned() == rl.to_owned());
+    
+                t.sort_by(|(a, _), (b, _)| b.cmp(a));
+    
+                let mut h = cell_count;
+                let mut distance = cell_count;
+                let total_pixels = cell_width * cell_height * cell_count;
+                let target_width = ((total_pixels as f32).sqrt() / (cell_width as f32)).round() as usize;
+                for (d, _) in t {
+                    let dist = (target_width).abs_diff(d);
+                    if dist < distance {
+                        h = d;
+                        distance = dist;
+                    }
+                }
+    
+    
+                let v = (cell_count as f32 / (h as f32)).ceil() as usize;
+    
+                if !flipped {
+                    (h, v)
+                } else {
+                    (v, h)
+                }
+            },
+            RenderLayout::Custom(h, v) => (h, v),
+        }
+    }
 }
 
 impl Display for RenderLayout {
@@ -116,105 +178,78 @@ pub struct RenderInfo {
 
 
 pub fn generate_render_data(
+    h_line_metrics: Option<LineMetrics>,
+    v_line_metrics: Option<LineMetrics>,
     rasterizations: Rasterizations,
-    render_settings: &RenderSettings,
-) -> (RenderData,  RenderInfo) {
-
-    let cell_width = rasterizations
-        .iter()
-        .map(|(m, _)| m.width)
-        .max()
-        .unwrap_or(render_settings.render_height.ceil() as usize);
-    let cell_height = rasterizations
-        .iter()
-        .map(|(m, _)| m.height)
-        .max()
-        .unwrap_or(render_settings.render_height.ceil() as usize);
+    render_settings: &RenderSettings
+) -> (RenderData, RenderInfo) {
 
 
-
-    // Texture dimension in cell counts.
-    let (cell_h_count, cell_v_count) = match render_settings.render_layout {
-        RenderLayout::Horizontal => (rasterizations.len(), 1),
-        RenderLayout::Vertical => (1, rasterizations.len()),
-        RenderLayout::Squarish => {
-            let total_pixels = cell_width * cell_height * rasterizations.len();
-            let target_width = (total_pixels as f32).sqrt().ceil();
-            let h_count = (target_width / (cell_width as f32)).round() as usize;
-            (h_count, (rasterizations.len() as f32 / h_count as f32).ceil() as usize)
-        }
-        RenderLayout::Packed(flipped) => {
-            let mut map = HashMap::new();
-            for i in 2..=(rasterizations.len() / 2) {
-                let remainder = rasterizations.len() % i;
-                let v = (i - remainder) % i;
-
-                map.insert(i, v);
-            }
-            
-            let mut t = map
-            .into_iter()
-            .collect::<Vec<_>>();
-            
-            t.sort_by(|(_, a), (_, b)| b.cmp(a));
-
-            let (_, rl) = t.last().unwrap().to_owned();
-
-            t.retain(|(_, r)| r.to_owned() == rl.to_owned());
-
-            t.sort_by(|(a, _), (b, _)| b.cmp(a));
-
-            let mut h = rasterizations.len();
-            let mut distance = rasterizations.len();
-            let total_pixels = cell_width * cell_height * rasterizations.len();
-            let target_width = ((total_pixels as f32).sqrt() / (cell_width as f32)).round() as usize;
-            for (d, _) in t {
-                let dist = (target_width).abs_diff(d);
-                if dist < distance {
-                    h = d;
-                    distance = dist;
-                }
-            }
-
-
-            let v = (rasterizations.len() as f32 / (h as f32)).ceil() as usize;
-
-            if !flipped {
-                (h, v)
-            } else {
-                (v, h)
-            }
-
-        }
-        RenderLayout::Custom(h, v) => (h, v)
+    let (vascent, vdescent) = if let Some(l_m) = h_line_metrics {
+        (l_m.ascent, l_m.descent)
+    } else {
+        (
+            rasterizations
+                .iter()
+                .map(|cr| cr.get_height())
+                .max()
+                .unwrap_or(render_settings.render_height.ceil() as usize) as f32,
+            0.0
+        )
     };
 
-    // Whole texture size in pixels.
-    let texture_width = cell_width * cell_h_count;
-    let texture_height = cell_height * cell_v_count;
+    let (hascent, hdescent) = if let Some(l_m) = v_line_metrics {
+        (l_m.ascent, l_m.descent)
+    } else {
+        (
+            rasterizations
+                .iter()
+                .map(|cr| cr.get_width())
+                .max()
+                .unwrap_or(render_settings.render_height.ceil() as usize) as f32,
+            0.0
+        )
+    };
 
-    // Pixel buffer.
-    let mut pixels = vec![0u8; texture_width * texture_height];
+    let cell_width = (hascent - hdescent).round() as usize;
+    let cell_height = (vascent - vdescent).round() as usize;
 
-    for (i, (metrics, rasterization)) in rasterizations.iter().take(cell_h_count * cell_v_count).enumerate() {
+    
+    let raster_count = rasterizations.len();
 
-        // Cell coordinates.
+    let (cell_h_count, cell_v_count) = render_settings.render_layout.get_cell_counts(raster_count, cell_width, cell_height);
+
+    let cell_count = cell_h_count * cell_v_count;
+
+    let texture_width = cell_h_count * cell_width;
+    let texture_height = cell_v_count * cell_height;
+
+    let mut pixels = vec![0u8; cell_h_count * cell_width * cell_v_count * cell_height];
+
+    for (idx, rasterization) in rasterizations.into_iter().enumerate() {
+
+        let metrics = rasterization.get_metrics();
+        let rasterization = rasterization.get_pixels();
+
+        // let xmin = metrics.bounds.xmin.round() as isize;
+        let ymin = metrics.bounds.ymin;
+
+        let inverted_ymin = (vascent - ((metrics.height as f32) + ymin)).ceil() as isize;
+        let width_offset = ((cell_width - metrics.width) as f32 / 2.0).ceil() as isize;
+        let width_offset = width_offset;
+
         let (cell_x, cell_y) = match render_settings.render_direction {
             RenderDirection::LeftToRight => {
-                let x = i % cell_h_count;
-                let y = i / cell_h_count;
+                let x = idx % cell_h_count;
+                let y = idx / cell_h_count;
                 (x, y)
             },
             RenderDirection::TopToBottom => {
-                let x = i / cell_v_count;
-                let y = i % cell_v_count;
+                let x = idx / cell_v_count;
+                let y = idx % cell_v_count;
                 (x, y)
             }
         };
-
-        // Rasterization offset within cell.
-        let center_offset_x = ((cell_width as isize) - (metrics.width as isize)) / 2;
-        let center_offset_y = ((cell_height as isize) - (metrics.height as isize)) / 2;
 
         for (i, value) in rasterization.iter().enumerate() {
             // Pixel coordinate within character rasterization.
@@ -222,27 +257,28 @@ pub fn generate_render_data(
             let raster_relative_y = (i - raster_relative_x) / metrics.width;
 
             // Pixel coordinate within cell.
-            let cell_relative_x = raster_relative_x as isize + center_offset_x;
-            let cell_relative_y = raster_relative_y as isize + center_offset_y;
-
-            let inverted_ymin = 0;
+            let cell_relative_x = raster_relative_x as isize + width_offset;
+            let cell_relative_y = raster_relative_y as isize + inverted_ymin;
 
             // Absolute pixel coordinate within texture atlas.
             let x = ((cell_x * cell_width) as isize 
-                + cell_relative_x
-                + metrics.xmin as isize)
+                + cell_relative_x)
                 .max(0) as usize;
             let y = ((cell_y * cell_height) as isize
-                + cell_relative_y
-                + inverted_ymin)
+                + cell_relative_y)
                 .max(0) as usize;
 
             // Absolute pixel coordinate as index in pixel buffer.
             let index = x + (y * cell_h_count * cell_width);
             if let Some(pixel) = pixels.get_mut(index) {
-                *pixel = *value;
-            }
+                if value == &u8::MIN {
+                    *pixel = 32u8
+                } else {
+                    *pixel = *value;
+                }
+            } 
         }
+
     }
 
     (
@@ -252,9 +288,10 @@ pub fn generate_render_data(
             pixels
         },
         RenderInfo {
-            cell_size: (cell_width, cell_height),
             cell_count: (cell_h_count, cell_v_count),
-            cell_filled: rasterizations.len().min(cell_h_count * cell_v_count)
+            cell_size: (cell_width, cell_height),
+            cell_filled: cell_count.min(raster_count)
+            
         }
     )
 }
