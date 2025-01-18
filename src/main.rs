@@ -1,5 +1,9 @@
+#![windows_subsystem = "windows"]
+
 use eframe::{run_native, Result, NativeOptions};
 use font_rasterizer::app::FontRasterizerApp;
+
+
 
 fn main() -> Result {
     let native_options = NativeOptions::default();
