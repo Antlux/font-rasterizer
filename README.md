@@ -37,23 +37,6 @@ Font Rasterizer is a tool made with the purpose of generating and rendering font
 
 </details>
 
-
-## Using the tool & Requirements
-To be able to use Font Rasterizer you need to have a [Rust](https://www.rust-lang.org) installed on your machine. 
-
-### Running the project
-First you need to clone the repository as there is no release as of yet.
-```bash
-  git clone https://github.com/Antlux/font-rasterizer.git
-```
-Then running the project is as simple running "cargo run" in the project folder.
-```bash
-  cd font-rasterizer
-```
-```bash
-  cargo run
-```
-
 ## Inspiration
 The whole reason I was inspired to develop this tool was Acerola's [font art video](https://www.youtube.com/watch?v=gg40RWiaHRY&t=719s), I wanted to recreate the effect shown in his video but could not find any adequate font atlas texture so I decided to make my own by creating this tool.
 
