@@ -44,7 +44,7 @@ impl FontRasterizerApp {
 
             if let Some(p) = self.render_settings.sort_property {
                 rasterizations.sort_rasters_by(p);
-            } 
+            }
 
             let (render_data, render_info) = generate_render_data(
                 h_line_metrics,
@@ -63,9 +63,20 @@ impl FontRasterizerApp {
 
     fn export_texture(&mut self) {
         if let Some(font_face) = &self.font_face {
-            let (cell_width, cell_height) = self.render_info.cell_size;
-            let (cell_h_count, cell_v_count) = self.render_info.cell_count;
-            let texture_name = format!("{}-({}w-{}h)-({}H-{}V)", font_face.stem(), cell_width, cell_height, cell_h_count, cell_v_count);
+            let (cell_width, cell_height) = self.render_info.cell_size();
+            let (cell_h_count, cell_v_count) = self.render_info.cell_count();
+            let (left, right, up, down) = self.render_info.cell_padding();
+            let texture_name = format!(
+                "{}-({}H-{}V)-({}w-{}h)-({}L-{}R-{}U-{}D)", 
+                font_face.stem(), 
+                cell_h_count, 
+                cell_v_count,
+                cell_width, cell_height, 
+                left,
+                right,
+                up,
+                down
+            );
             if let Err(err) = write_image(texture_name, &self.render_data) {
                 eprintln!("{}", err);
             }
@@ -133,6 +144,33 @@ impl FontRasterizerApp {
             // }
         });
         // Render Height
+
+        ui.vertical(|ui| {
+            ui.horizontal(|ui| {
+                if ui.add(DragValue::new(&mut self.render_settings.render_padding.left)).changed() {
+                    self.render_font();
+                }
+                ui.label("Left padding");
+            });
+            ui.horizontal(|ui| {
+                if ui.add(DragValue::new(&mut self.render_settings.render_padding.right)).changed() {
+                    self.render_font();
+                }
+                ui.label("Right padding");
+            });
+            ui.horizontal(|ui| {
+                if ui.add(DragValue::new(&mut self.render_settings.render_padding.up)).changed() {
+                    self.render_font();
+                }
+                ui.label("Up padding");
+            });
+            ui.horizontal(|ui| {
+                if ui.add(DragValue::new(&mut self.render_settings.render_padding.down)).changed() {
+                    self.render_font();
+                }
+                ui.label("Down padding");
+            })
+        });
 
         // Render Layout
         ComboBox::from_label("Render Layout")
@@ -291,18 +329,23 @@ impl eframe::App for FontRasterizerApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ScrollArea::horizontal().show(ui, |ui| {
-                    let (cell_width, cell_height) = self.render_info.cell_size;
-                    let (cell_h_count, cell_v_count) = self.render_info.cell_count;
-                    let texture_width = cell_width * cell_h_count;
-                    let texture_height = cell_height * cell_v_count;
-                    let cell_filled = self.render_info.cell_filled;
+                    let (cell_width, cell_height) = self.render_info.cell_size();
+                    let (cell_h_count, cell_v_count) = self.render_info.cell_count();
+                    let (left, right, up, down) = self.render_info.cell_padding();
+                    let texture_width = self.render_data.width();
+                    let texture_height = self.render_data.height();
+                    let cell_filled = self.render_info.cell_filled();
                     let cell_count = cell_h_count * cell_v_count;
                     let empty_cells = cell_count - cell_filled;
                     let info_text = format!(
-                        "{} characters rendered | Cell size: {}x{} pixels | Cell count: {}x{} ({}) | Empty cells: {} | Texture size: {}x{} pixels", 
+                        "{} characters rendered | Cell size: {}x{} pixels | Cell padding: L: {} R: {} U: {} D: {} | Cell count: {}x{} ({}) | Empty cells: {} | Texture size: {}x{} pixels", 
                         cell_filled, 
                         cell_width, 
-                        cell_height, 
+                        cell_height,
+                        left,
+                        right,
+                        up,
+                        down,
                         cell_h_count, 
                         cell_v_count, 
                         cell_count,

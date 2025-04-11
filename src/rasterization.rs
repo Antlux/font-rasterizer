@@ -18,8 +18,10 @@ impl Display for RasterizationProperty {
     }
 }
 
+#[derive(Clone)]
 pub struct CharRaster {
     metrics: Metrics,
+    brightness: usize,
     pixels: Vec<u8>,
 }
 
@@ -27,7 +29,8 @@ impl CharRaster {
     pub fn new((metrics, pixels): (Metrics, Vec<u8>)) -> Self {
         Self {
             metrics,
-            pixels
+            brightness: pixels.iter().map(|v| *v as usize).sum(),
+            pixels,
         }
     }
 
@@ -48,7 +51,7 @@ impl CharRaster {
     }
 
     pub fn get_brightness(&self) -> usize {
-        self.pixels.iter().map(|v| *v as usize).sum()
+        self.brightness
     }
     
     pub fn get_width(&self) -> usize {
@@ -87,7 +90,6 @@ impl RasterManip for Rasterizations {
     }
     
     fn dedup_rasters_by(&mut self, property: RasterizationProperty) {
-
         let mut set = HashSet::new();
         self.retain(|r| set.insert(r.get_property(property)));
     }

@@ -23,10 +23,24 @@ impl Display for RendererError {
     }
 }
 
+#[derive(Clone, Default)]
+pub struct Padding {
+    pub left: usize,
+    pub right: usize,
+    pub up: usize,
+    pub down: usize,
+}
+
+impl Padding {
+    pub fn horizontal(&self) -> usize {self.left + self.right}
+    pub fn vertical(&self) -> usize {self.up + self.down}
+}
+
 #[derive(Clone)]
 pub struct RenderSettings {
     pub input: Option<String>,
     pub render_height: f32,
+    pub render_padding: Padding,
     pub render_layout: RenderLayout,
     pub render_direction: RenderDirection,
     pub sort_property: Option<RasterizationProperty>,
@@ -39,11 +53,12 @@ impl Default for RenderSettings {
         Self {
             input: None,
             render_height: 8.0,
+            render_padding: Padding::default(),
             render_layout: RenderLayout::Squarish,
             render_direction: RenderDirection::LeftToRight,
             sort_property: Some(RasterizationProperty::Brightness),
             dedup_property: Some(RasterizationProperty::Brightness),
-            dedup_exact_duplicate: true
+            dedup_exact_duplicate: true,
         }
     }
 }
@@ -160,6 +175,8 @@ impl RenderData {
     pub fn renderable(&self) -> bool {
         self.width.max(self.height) <= 16384
     }
+    pub fn width(&self) -> usize {self.width}
+    pub fn height(&self) -> usize {self.height}
 }
 
 impl From<RenderData> for ColorImage {
@@ -171,9 +188,17 @@ impl From<RenderData> for ColorImage {
 
 #[derive(Default, Clone)]
 pub struct RenderInfo {
-    pub cell_size: (usize, usize),
-    pub cell_count: (usize, usize),
-    pub cell_filled: usize
+    cell_size: (usize, usize),
+    cell_count: (usize, usize),
+    cell_filled: usize,
+    cell_padding: (usize, usize, usize, usize)
+}
+
+impl RenderInfo {
+    pub fn cell_size(&self) -> (usize, usize) {self.cell_size}
+    pub fn cell_count(&self) -> (usize, usize) {self.cell_count}
+    pub fn cell_filled(&self) -> usize {self.cell_filled}
+    pub fn cell_padding(&self) -> (usize, usize, usize, usize) {self.cell_padding}
 }
 
 
@@ -183,7 +208,6 @@ pub fn generate_render_data(
     rasterizations: Rasterizations,
     render_settings: &RenderSettings
 ) -> (RenderData, RenderInfo) {
-
 
     let (vascent, vdescent) = if let Some(l_m) = h_line_metrics {
         (l_m.ascent, l_m.descent)
@@ -214,17 +238,23 @@ pub fn generate_render_data(
     let cell_width = (hascent - hdescent).round() as usize;
     let cell_height = (vascent - vdescent).round() as usize;
 
-    
+    let padded_cell_width = cell_width + render_settings.render_padding.horizontal();
+    let padded_cell_height = cell_height + render_settings.render_padding.vertical();
+
     let raster_count = rasterizations.len();
 
-    let (cell_h_count, cell_v_count) = render_settings.render_layout.get_cell_counts(raster_count, cell_width, cell_height);
+    let (cell_h_count, cell_v_count) = render_settings.render_layout.get_cell_counts(
+        raster_count, 
+        padded_cell_width,
+        padded_cell_height
+    );
 
     let cell_count = cell_h_count * cell_v_count;
 
-    let texture_width = cell_h_count * cell_width;
-    let texture_height = cell_v_count * cell_height;
+    let texture_width = cell_h_count * padded_cell_width;
+    let texture_height = cell_v_count * padded_cell_height;
 
-    let mut pixels = vec![0u8; cell_h_count * cell_width * cell_v_count * cell_height];
+    let mut pixels = vec![0u8; texture_width * texture_height];
 
     for (idx, rasterization) in rasterizations.into_iter().enumerate() {
 
@@ -236,7 +266,6 @@ pub fn generate_render_data(
 
         let inverted_ymin = (vascent - ((metrics.height as f32) + ymin)).ceil() as isize;
         let width_offset = ((cell_width - metrics.width) as f32 / 2.0).ceil() as isize;
-        let width_offset = width_offset;
 
         let (cell_x, cell_y) = match render_settings.render_direction {
             RenderDirection::LeftToRight => {
@@ -261,15 +290,18 @@ pub fn generate_render_data(
             let cell_relative_y = raster_relative_y as isize + inverted_ymin;
 
             // Absolute pixel coordinate within texture atlas.
-            let x = ((cell_x * cell_width) as isize 
+            let x = ((cell_x * padded_cell_width) as isize
                 + cell_relative_x)
                 .max(0) as usize;
-            let y = ((cell_y * cell_height) as isize
+            let x = x + render_settings.render_padding.left; 
+
+            let y = ((cell_y * padded_cell_height) as isize
                 + cell_relative_y)
                 .max(0) as usize;
+            let y = y + render_settings.render_padding.up; 
 
             // Absolute pixel coordinate as index in pixel buffer.
-            let index = x + (y * cell_h_count * cell_width);
+            let index = x + (y * cell_h_count * padded_cell_width);
             if let Some(pixel) = pixels.get_mut(index) {
                 *pixel = *value;
             } 
@@ -286,8 +318,13 @@ pub fn generate_render_data(
         RenderInfo {
             cell_count: (cell_h_count, cell_v_count),
             cell_size: (cell_width, cell_height),
-            cell_filled: cell_count.min(raster_count)
-            
+            cell_filled: cell_count.min(raster_count),
+            cell_padding: (
+                render_settings.render_padding.left,
+                render_settings.render_padding.right,
+                render_settings.render_padding.up,
+                render_settings.render_padding.down,
+            )
         }
     )
 }
